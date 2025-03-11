@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Main Page</title>
+</head>
+<body>
+    <h1>Welcome to Main Page</h1>
+    
+    <a href="{% url 'projectApp:referee' %}"><button>Referee Page</button></a>
+    <a href="{% url 'projectApp:adminpage' %}"><button>Admin Page</button></a>
+    <a href="{% url 'projectApp:uploadarticle' %}"><button>Upload Article</button></a>
+    <a href="{% url 'projectApp:queryarticle' %}"><button>Query Article</button></a>
+</body>
+</html>

@@ -37,6 +37,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'projectApp',
 ]
 
 MIDDLEWARE = [
@@ -54,8 +55,8 @@ ROOT_URLCONF = 'anonymoussystem.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
-        'APP_DIRS': True,
+        'DIRS': [BASE_DIR / "projectApp/templates"],  # Eğer templates klasörü proje seviyesindeyse
+        'APP_DIRS': True,  # Uygulama içindeki templates klasörlerini kullan
         'OPTIONS': {
             'context_processors': [
                 'django.template.context_processors.debug',
@@ -67,6 +68,7 @@ TEMPLATES = [
     },
 ]
 
+
 WSGI_APPLICATION = 'anonymoussystem.wsgi.application'
 
 
@@ -74,9 +76,14 @@ WSGI_APPLICATION = 'anonymoussystem.wsgi.application'
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+    'default':{
+        'ENGINE':'mssql',                    # Must be "mssql"
+        'NAME':'DbAnonymo',                       
+        'HOST':'localhost\\SQLEXPRESS', # <server>\<instance>
+        'PORT':'',                           # Keep it blank
+        'OPTIONS': {
+            'driver': 'ODBC Driver 17 for SQL Server',
+        },
     }
 }
 

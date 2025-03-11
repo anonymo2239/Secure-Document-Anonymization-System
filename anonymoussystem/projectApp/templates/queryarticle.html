@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Makale Sorgula</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            padding: 20px;
+        }
+        .chat-container {
+            width: 50%;
+            margin: 20px auto;
+            border: 1px solid #ccc;
+            padding: 10px;
+            height: 300px;
+            overflow-y: auto;
+            text-align: left;
+        }
+        .message-box {
+            width: 50%;
+            margin: 10px auto;
+        }
+    </style>
+</head>
+<body>
+    <h2>Makale Sorgula</h2>
+    <input type="text" placeholder="Takip numaranızı girin" required>
+    <br><br>
+    <button type="submit">Onayla</button>
+    
+    <div class="chat-container" id="chatBox">
+        <p><strong>Kullanıcı:</strong> Merhaba, makale durumu nedir?</p>
+        <p><strong>Destek:</strong> Makaleniz inceleniyor.</p>
+    </div>
+
+    <div class="message-box">
+        <input type="text" id="messageInput" placeholder="Mesajınızı yazın" style="width: 80%;">
+        <button onclick="sendMessage()">Mesajı Gönder</button>
+    </div>
+
+    <script>
+        function sendMessage() {
+            const messageInput = document.getElementById("messageInput");
+            const chatBox = document.getElementById("chatBox");
+            
+            if (messageInput.value.trim() !== "") {
+                const newMessage = document.createElement("p");
+                newMessage.innerHTML = <strong>Kullanıcı:</strong> ${messageInput.value};
+                chatBox.appendChild(newMessage);
+                messageInput.value = "";
+                chatBox.scrollTop = chatBox.scrollHeight;
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Makale Yükleme</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            padding: 20px;
+        }
+        .upload-container {
+            margin: 20px auto;
+            width: 50%;
+            padding: 20px;
+            border: 2px dashed #ccc;
+            text-align: center;
+        }
+        .upload-container.dragover {
+            border-color: #000;
+        }
+        .right-bottom {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h2>Makale Yükleme</h2>
+    <input type="email" placeholder="E-posta adresinizi girin" required>
+    <br><br>
+    <div class="upload-container" id="upload-box">
+        <p>PDF dosyanızı buraya sürükleyin veya tıklayarak yükleyin.</p>
+        <input type="file" id="fileInput" accept="application/pdf" hidden>
+    </div>
+    <br>
+    <button type="submit">Makale Gönder</button>
+    
+    <button class="right-bottom">Makale Sorgula</button>
+
+    <script>
+        const uploadBox = document.getElementById("upload-box");
+        const fileInput = document.getElementById("fileInput");
+
+        uploadBox.addEventListener("click", () => fileInput.click());
+
+        uploadBox.addEventListener("dragover", (event) => {
+            event.preventDefault();
+            uploadBox.classList.add("dragover");
+        });
+
+        uploadBox.addEventListener("dragleave", () => uploadBox.classList.remove("dragover"));
+
+        uploadBox.addEventListener("drop", (event) => {
+            event.preventDefault();
+            uploadBox.classList.remove("dragover");
+            const files = event.dataTransfer.files;
+            if (files.length > 0 && files[0].type === "application/pdf") {
+                fileInput.files = files;
+            } else {
+                alert("Lütfen sadece PDF dosyası yükleyin.");
+            }
+        });
+    </script>
+</body>
+</html>
