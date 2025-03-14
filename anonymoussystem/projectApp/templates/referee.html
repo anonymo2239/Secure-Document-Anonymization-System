@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hakem Paneli</title>
+</head>
+<body>
+    <h2>Hakem Paneli</h2>
+
+    <!-- Hakem e-posta giriş alanı -->
+    <div>
+        <input type="email" id="emailInput" placeholder="E-posta adresinizi girin">
+        <button onclick="fetchDocuments()">Sorgula</button>
+    </div>
+
+    <!-- PDF tablosu -->
+    <table id="documentsTable" border="1" style="display: none;">
+        <thead>
+            <tr>
+                <th>Makale Sahibi</th>
+                <th>PDF</th>
+                <th>İncele</th>
+            </tr>
+        </thead>
+        <tbody id="documentsBody"></tbody>
+    </table>
+
+    <script>
+        async function fetchDocuments() {
+            const email = document.getElementById("emailInput").value.trim();
+            if (!email) {
+                alert("Lütfen e-posta adresinizi girin.");
+                return;
+            }
+
+            try {
+                const response = await fetch(/get_referee_documents/?email=${email});
+                const documents = await response.json();
+                const table = document.getElementById("documentsTable");
+                const tbody = document.getElementById("documentsBody");
+                tbody.innerHTML = "";
+
+                if (documents.length === 0) {
+                    alert("Bu e-posta adresine atanmış makale bulunamadı.");
+                    table.style.display = "none";
+                    return;
+                }
+
+                documents.forEach(doc => {
+                    const row = document.createElement("tr");
+
+                    // Makale sahibi sütunu
+                    const ownerCell = document.createElement("td");
+                    ownerCell.textContent = doc.owner_email;
+                    row.appendChild(ownerCell);
+
+                    // PDF linki
+                    const pdfCell = document.createElement("td");
+                    const pdfLink = document.createElement("a");
+                    pdfLink.href = /media/${doc.pdf_path};
+                    pdfLink.textContent = "PDF Görüntüle";
+                    pdfLink.target = "_blank";
+                    pdfCell.appendChild(pdfLink);
+                    row.appendChild(pdfCell);
+
+                    // İncele butonu
+                    const actionCell = document.createElement("td");
+                    const inspectButton = document.createElement("button");
+                    inspectButton.textContent = "İncele";
+                    inspectButton.onclick = function () {
+                        window.location.href = /inspectreferee/?doc_id=${doc.id};
+                    };
+                    actionCell.appendChild(inspectButton);
+                    row.appendChild(actionCell);
+
+                    tbody.appendChild(row);
+                });
+
+                table.style.display = "block";
+            } catch (error) {
+                alert("Belgeleri çekerken hata oluştu.");
+            }
+        }
+    </script>
+</body>
+</html>

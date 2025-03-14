@@ -26,30 +26,18 @@
             </tr>
         </thead>
         <tbody>
+            {% for article in articles %}
             <tr>
-                <td>Ahmet Yılmaz</td>
-                <td>Makale 1</td>
+                <td>{{ article.owner_email }}</td>
+                <td>Makale ({{ article.tracking_no }})</td>
                 <td>
-                    <button>İncele</button>
+                    <a href="{% url 'projectApp:inspect_article' article.id %}">
+                        <button>İncele</button>
+                    </a>
                     <button>Yönlendir</button>
                 </td>
             </tr>
-            <tr>
-                <td>Mehmet Kaya</td>
-                <td>Makale 2</td>
-                <td>
-                    <button>İncele</button>
-                    <button>Yönlendir</button>
-                </td>
-            </tr>
-            <tr>
-                <td>Elif Demir</td>
-                <td>Makale 3</td>
-                <td>
-                    <button>İncele</button>
-                    <button>Yönlendir</button>
-                </td>
-            </tr>
+            {% endfor %}
         </tbody>
     </table>
 </body>

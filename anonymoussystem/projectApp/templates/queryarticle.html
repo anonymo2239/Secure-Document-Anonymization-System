@@ -18,41 +18,107 @@
             height: 300px;
             overflow-y: auto;
             text-align: left;
+            background: #f9f9f9;
+            display: none; /* Başlangıçta gizli */
         }
         .message-box {
             width: 50%;
             margin: 10px auto;
+            display: none; /* Başlangıçta gizli */
+            gap: 10px;
+            display: flex;
+        }
+        .message-box input {
+            flex: 1;
+            padding: 5px;
         }
     </style>
 </head>
 <body>
     <h2>Makale Sorgula</h2>
-    <input type="text" placeholder="Takip numaranızı girin" required>
-    <br><br>
-    <button type="submit">Onayla</button>
-    
-    <div class="chat-container" id="chatBox">
-        <p><strong>Kullanıcı:</strong> Merhaba, makale durumu nedir?</p>
-        <p><strong>Destek:</strong> Makaleniz inceleniyor.</p>
+
+    <!-- E-posta giriş alanı -->
+    <div id="emailContainer">
+        <input type="email" id="emailInput" placeholder="E-posta adresinizi girin" required>
+        <br><br>
+        <button onclick="setEmail()">Onayla</button>
     </div>
 
-    <div class="message-box">
-        <input type="text" id="messageInput" placeholder="Mesajınızı yazın" style="width: 80%;">
-        <button onclick="sendMessage()">Mesajı Gönder</button>
+    <!-- Mesajlaşma alanı -->
+    <div class="chat-container" id="chatBox"></div>
+
+    <!-- Mesaj giriş ve gönderme butonu -->
+    <div class="message-box" id="messageContainer">
+        <input type="text" id="messageInput" placeholder="Mesajınızı yazın">
+        <button onclick="sendMessage()">Gönder</button>
     </div>
 
     <script>
-        function sendMessage() {
-            const messageInput = document.getElementById("messageInput");
-            const chatBox = document.getElementById("chatBox");
-            
-            if (messageInput.value.trim() !== "") {
-                const newMessage = document.createElement("p");
-                newMessage.innerHTML = <strong>Kullanıcı:</strong> ${messageInput.value};
-                chatBox.appendChild(newMessage);
-                messageInput.value = "";
-                chatBox.scrollTop = chatBox.scrollHeight;
+        let userEmail = "";
+
+        function setEmail() {
+            const emailInput = document.getElementById("emailInput");
+            if (!emailInput.value.trim()) {
+                alert("Lütfen e-posta adresinizi girin.");
+                return;
             }
+            userEmail = emailInput.value.trim();
+
+            // E-posta giriş alanını gizle
+            document.getElementById("emailContainer").style.display = "none";
+            // Sohbet alanlarını aç
+            document.getElementById("chatBox").style.display = "block";
+            document.getElementById("messageContainer").style.display = "flex";
+
+            loadMessages();
+        }
+
+        async function sendMessage() {
+            const messageInput = document.getElementById("messageInput");
+            if (!messageInput.value.trim()) {
+                alert("Lütfen bir mesaj girin.");
+                return;
+            }
+
+            try {
+                const response = await fetch("/send_message/", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ email: userEmail, message: messageInput.value.trim() })
+                });
+
+                const result = await response.json();
+                if (response.ok) {
+                    appendMessage(userEmail, messageInput.value.trim());
+                    messageInput.value = "";
+                } else {
+                    alert(Hata: ${result.error});
+                }
+            } catch (error) {
+                alert("Sunucu hatası! Lütfen tekrar deneyin.");
+            }
+        }
+
+        async function loadMessages() {
+            try {
+                const response = await fetch(/get_messages/?email=${userEmail});
+                const messages = await response.json();
+                const chatBox = document.getElementById("chatBox");
+                chatBox.innerHTML = "";
+                messages.forEach(msg => {
+                    appendMessage(msg.sender, msg.message);
+                });
+            } catch (error) {
+                alert("Mesajları yüklerken hata oluştu.");
+            }
+        }
+
+        function appendMessage(sender, message) {
+            const chatBox = document.getElementById("chatBox");
+            const newMessage = document.createElement("p");
+            newMessage.innerHTML = <strong>${sender}:</strong> ${message};
+            chatBox.appendChild(newMessage);
+            chatBox.scrollTop = chatBox.scrollHeight;
         }
     </script>
 </body>

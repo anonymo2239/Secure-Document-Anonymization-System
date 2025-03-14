@@ -12,6 +12,7 @@ DATABASES = {
     }
 }
 
+* pip install mssql-django
 * Sonra python manage.py inspectdb > models.py çalıştır.
 * python manage.py makemigrations
 * python manage.py migrate
