@@ -1,3 +1,4 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="tr">
 <head>
@@ -5,24 +6,72 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Makale İnceleme</title>
     <script>
-        function restoreOriginal() {
-            fetch("{% url 'projectApp:deanonymize_article' article_id=article_id %}")
-            .then(response => response.blob())
+        function loadAnonymized() {
+            let timestamp = new Date().getTime();
+            let article_id = "{{ article_id }}";
+            let pdfFrame = document.getElementById("pdf-frame");
+            fetch(`/anonymize_article/${article_id}?t=` + timestamp)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error("PDF anonimleştirilemedi.");
+                }
+                return response.blob();
+            })
             .then(blob => {
                 const url = window.URL.createObjectURL(blob);
-                document.getElementById("pdf-frame").src = url;  // PDF'yi güncelle
+                pdfFrame.src = url;
+            })
+            .catch(error => console.error("Anonimleştirme hatası:", error));
+        }
+
+        function restoreOriginal() {
+            let timestamp = new Date().getTime();
+            let article_id = "{{ article_id }}";
+            let pdfFrame = document.getElementById("pdf-frame");
+            fetch(`/deanonymize_article/${article_id}?t=` + timestamp)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error("PDF geri yüklenemedi.");
+                }
+                return response.blob();
+            })
+            .then(blob => {
+                const url = window.URL.createObjectURL(blob);
+                pdfFrame.src = url;
             })
             .catch(error => console.error("Geri yükleme hatası:", error));
+        }
+
+        function saveCurrentPdf() {
+            let article_id = "{{ article_id }}";
+            fetch(`/save_anonymized/${article_id}/`, {
+                method: "POST",
+                headers: {
+                    "X-CSRFToken": "{{ csrf_token }}",
+                    "Content-Type": "application/json"
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error("Kaydetme işlemi başarısız oldu.");
+                }
+                return response.json();
+            })
+            .then(data => {
+                alert(data.message);
+            })
+            .catch(error => console.error("Kaydetme hatası:", error));
         }
     </script>
 </head>
 <body>
     <h1>Makale İnceleme</h1>
-
     {% if pdf_url %}
         <p><a href="{{ pdf_url }}" download="makale.pdf">📥 PDF'yi İndir</a></p>
-        <button onclick="restoreOriginal()">🛠️ Orijinal Bilgileri Geri Yükle</button>
-        <iframe id="pdf-frame" src="{{ pdf_url }}" width="100%" height="800px"></iframe>
+        <button onclick="loadAnonymized()">🔒 Anonimleştir</button>
+        <button onclick="restoreOriginal()">🛠 Orijinal Bilgileri Geri Yükle</button>
+        <button onclick="saveCurrentPdf()">💾 Anonimleştirilmiş PDF'i Kaydet</button>
+        <iframe id="pdf-frame" src="{{ pdf_url }}?t={{ timestamp }}" width="100%" height="800px"></iframe>
     {% else %}
         <p>PDF yüklenemedi veya bulunamadı.</p>
     {% endif %}

@@ -8,15 +8,6 @@
 <body>
     <h1>Admin Paneli</h1>
     
-    <!-- Sol Kısım -->
-    <div>
-        <button>Gelen Hakem Değerlendirmeleri</button>
-        <button>Log Kayıtları</button>
-    </div>
-    
-    <br>
-    
-    <!-- Sağ Kısım: Tablo -->
     <table border="1">
         <thead>
             <tr>
@@ -29,16 +20,103 @@
             {% for article in articles %}
             <tr>
                 <td>{{ article.owner_email }}</td>
-                <td>Makale ({{ article.tracking_no }})</td>
                 <td>
-                    <a href="{% url 'projectApp:inspect_article' article.id %}">
-                        <button>İncele</button>
-                    </a>
-                    <button>Yönlendir</button>
+                    <a href="{% url 'projectApp:view_article_pdf' article.id %}" target="_blank">Makale PDF</a>
+                </td>
+                <td>
+                    <a href="{% url 'projectApp:inspect_article' article.id %}"><button>İncele</button></a>
+
+                    <!-- Hakem yönlendirme formu -->
+                    <form method="POST" action="{% url 'projectApp:assign_referee' article.id %}" style="display:inline;">
+                        {% csrf_token %}
+                        <input type="email" name="referee_email" placeholder="Hakem E-posta" required>
+                        <button type="submit">Yönlendir</button>
+                    </form>
+
+                    <!-- Mesaj Gönder Butonu -->
+                    <button onclick="openChat('{{ article.owner_email }}')">Mesaj Gönder</button>
                 </td>
             </tr>
             {% endfor %}
         </tbody>
     </table>
+
+    <!-- Mesajlaşma Paneli -->
+    <div id="chatBox" style="display: none; border: 1px solid black; padding: 10px; margin-top: 20px;">
+        <h3>Mesajlaşma</h3>
+        <div id="messages" style="height: 200px; overflow-y: auto; border: 1px solid gray; padding: 5px;"></div>
+        <input type="text" id="messageInput" placeholder="Mesajınızı yazın">
+        <button onclick="sendMessage()">Gönder</button>
+        <button onclick="closeChat()">Kapat</button>
+    </div>
+
+    <script>
+        let currentRecipient = "";
+        let currentSender = "admin"; // Eğer admin giriş yapmışsa "admin" olarak ayarlanır.
+    
+        function openChat(email) {
+            currentRecipient = email;
+            document.getElementById("chatBox").style.display = "block";
+            loadMessages();
+        }
+    
+        function closeChat() {
+            document.getElementById("chatBox").style.display = "none";
+        }
+    
+        async function sendMessage() {
+            const messageInput = document.getElementById("messageInput");
+            const messageText = messageInput.value.trim();
+    
+            if (!currentSender || !currentRecipient || !messageText) {
+                alert("Gönderen, alıcı ve mesaj boş olamaz!");
+                return;
+            }
+    
+            try {
+                const response = await fetch("/send_message/", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ sender: currentSender, receiver: currentRecipient, message: messageText })
+                });
+    
+                if (response.ok) {
+                    appendMessage(currentSender, messageText);
+                    messageInput.value = "";
+                } else {
+                    alert("Mesaj gönderilirken hata oluştu.");
+                }
+            } catch (error) {
+                alert("Bağlantı hatası!");
+            }
+        }
+    
+        async function loadMessages() {
+            try {
+                const response = await fetch(`/get_messages/?email=${currentSender}&receiver=${currentRecipient}`);
+                const messages = await response.json();
+                const messagesDiv = document.getElementById("messages");
+                messagesDiv.innerHTML = "";
+    
+                messages.forEach(msg => {
+                    if ((msg.sender === currentSender && msg.receiver === currentRecipient) || 
+                        (msg.sender === currentRecipient && msg.receiver === currentSender)) {
+                        appendMessage(msg.sender, msg.message);
+                    }
+                });
+            } catch (error) {
+                alert("Mesajlar yüklenirken hata oluştu.");
+            }
+        }
+    
+        function appendMessage(sender, message) {
+            const messagesDiv = document.getElementById("messages");
+            const newMessage = document.createElement("p");
+            newMessage.innerHTML = `<strong>${sender}:</strong> ${message}`;
+            messagesDiv.appendChild(newMessage);
+        }
+    </script>
+    
+    
 </body>
 </html>

@@ -6,82 +6,39 @@
     <title>Hakem Paneli</title>
 </head>
 <body>
-    <h2>Hakem Paneli</h2>
+    <h1>Hakem Paneli</h1>
 
-    <!-- Hakem e-posta giriş alanı -->
-    <div>
-        <input type="email" id="emailInput" placeholder="E-posta adresinizi girin">
-        <button onclick="fetchDocuments()">Sorgula</button>
-    </div>
+    <form method="GET">
+        <label for="email">E-posta:</label>
+        <input type="email" name="email" required>
+        <button type="submit">Giriş Yap</button>
+    </form>
 
-    <!-- PDF tablosu -->
-    <table id="documentsTable" border="1" style="display: none;">
+    {% if documents %}
+    <table border="1">
         <thead>
             <tr>
-                <th>Makale Sahibi</th>
-                <th>PDF</th>
-                <th>İncele</th>
+                <th>Makale</th>
+                <th>İşlemler</th>
             </tr>
         </thead>
-        <tbody id="documentsBody"></tbody>
+        <tbody>
+            {% for doc in documents %}
+            <tr>
+                <td>
+                    <a href="{% url 'projectApp:view_article_pdf' doc.id %}" target="_blank">Makale PDF</a>
+                </td>
+                <td>
+                    <a href="{% url 'projectApp:refereeassessment' doc.id %}">
+                        <button>Değerlendir</button>
+                    </a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
     </table>
-
-    <script>
-        async function fetchDocuments() {
-            const email = document.getElementById("emailInput").value.trim();
-            if (!email) {
-                alert("Lütfen e-posta adresinizi girin.");
-                return;
-            }
-
-            try {
-                const response = await fetch(/get_referee_documents/?email=${email});
-                const documents = await response.json();
-                const table = document.getElementById("documentsTable");
-                const tbody = document.getElementById("documentsBody");
-                tbody.innerHTML = "";
-
-                if (documents.length === 0) {
-                    alert("Bu e-posta adresine atanmış makale bulunamadı.");
-                    table.style.display = "none";
-                    return;
-                }
-
-                documents.forEach(doc => {
-                    const row = document.createElement("tr");
-
-                    // Makale sahibi sütunu
-                    const ownerCell = document.createElement("td");
-                    ownerCell.textContent = doc.owner_email;
-                    row.appendChild(ownerCell);
-
-                    // PDF linki
-                    const pdfCell = document.createElement("td");
-                    const pdfLink = document.createElement("a");
-                    pdfLink.href = /media/${doc.pdf_path};
-                    pdfLink.textContent = "PDF Görüntüle";
-                    pdfLink.target = "_blank";
-                    pdfCell.appendChild(pdfLink);
-                    row.appendChild(pdfCell);
-
-                    // İncele butonu
-                    const actionCell = document.createElement("td");
-                    const inspectButton = document.createElement("button");
-                    inspectButton.textContent = "İncele";
-                    inspectButton.onclick = function () {
-                        window.location.href = /inspectreferee/?doc_id=${doc.id};
-                    };
-                    actionCell.appendChild(inspectButton);
-                    row.appendChild(actionCell);
-
-                    tbody.appendChild(row);
-                });
-
-                table.style.display = "block";
-            } catch (error) {
-                alert("Belgeleri çekerken hata oluştu.");
-            }
-        }
-    </script>
+    {% else %}
+        <p>Bu e-postaya atanmış makale bulunamadı.</p>
+    {% endif %}
 </body>
 </html>

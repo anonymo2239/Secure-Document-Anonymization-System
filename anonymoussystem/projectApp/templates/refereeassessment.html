@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hakem Değerlendirme</title>
+</head>
+<body>
+    <h1>Hakem Değerlendirme Sayfası</h1>
+
+    <embed src="{% url 'projectApp:view_article_pdf' article.id %}" width="100%" height="500px" type="application/pdf">
+
+    <form method="POST">
+        {% csrf_token %}
+        <label for="assessment">Değerlendirmenizi Girin:</label><br>
+        <textarea name="assessment" rows="5" cols="50" required></textarea><br>
+        <button type="submit">Gönder</button>
+    </form>
+</body>
+</html>

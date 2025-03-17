@@ -55,7 +55,7 @@
 
     <script>
         let userEmail = "";
-
+    
         function setEmail() {
             const emailInput = document.getElementById("emailInput");
             if (!emailInput.value.trim()) {
@@ -63,63 +63,65 @@
                 return;
             }
             userEmail = emailInput.value.trim();
-
-            // E-posta giriş alanını gizle
+    
             document.getElementById("emailContainer").style.display = "none";
-            // Sohbet alanlarını aç
             document.getElementById("chatBox").style.display = "block";
             document.getElementById("messageContainer").style.display = "flex";
-
+    
             loadMessages();
         }
-
+    
         async function sendMessage() {
             const messageInput = document.getElementById("messageInput");
-            if (!messageInput.value.trim()) {
-                alert("Lütfen bir mesaj girin.");
+            const messageText = messageInput.value.trim();
+            const receiver = "admin"; // Kullanıcı mesajı admin'e gönderiyor
+    
+            if (!userEmail || !receiver || !messageText) {
+                alert("Gönderen, alıcı ve mesaj boş olamaz!");
                 return;
             }
-
+    
             try {
                 const response = await fetch("/send_message/", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ email: userEmail, message: messageInput.value.trim() })
+                    body: JSON.stringify({ sender: userEmail, receiver: receiver, message: messageText })
                 });
-
-                const result = await response.json();
+    
                 if (response.ok) {
-                    appendMessage(userEmail, messageInput.value.trim());
+                    appendMessage(userEmail, messageText);
                     messageInput.value = "";
                 } else {
-                    alert(Hata: ${result.error});
+                    alert("Mesaj gönderilirken hata oluştu.");
                 }
             } catch (error) {
-                alert("Sunucu hatası! Lütfen tekrar deneyin.");
+                alert("Bağlantı hatası!");
             }
         }
-
+    
         async function loadMessages() {
             try {
-                const response = await fetch(/get_messages/?email=${userEmail});
+                const response = await fetch(`/get_messages/?email=${userEmail}&receiver=admin`);
                 const messages = await response.json();
                 const chatBox = document.getElementById("chatBox");
                 chatBox.innerHTML = "";
+    
                 messages.forEach(msg => {
                     appendMessage(msg.sender, msg.message);
                 });
             } catch (error) {
-                alert("Mesajları yüklerken hata oluştu.");
+                alert("Mesajlar yüklenirken hata oluştu.");
             }
         }
-
+    
         function appendMessage(sender, message) {
             const chatBox = document.getElementById("chatBox");
             const newMessage = document.createElement("p");
-            newMessage.innerHTML = <strong>${sender}:</strong> ${message};
+            newMessage.innerHTML = `<strong>${sender}:</strong> ${message}`;
             chatBox.appendChild(newMessage);
             chatBox.scrollTop = chatBox.scrollHeight;
         }
     </script>
+    
 </body>
 </html>

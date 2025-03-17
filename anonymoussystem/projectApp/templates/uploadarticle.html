@@ -29,39 +29,79 @@
 </head>
 <body>
     <h2>Makale Yükleme</h2>
-    <input type="email" placeholder="E-posta adresinizi girin" required>
-    <br><br>
-    <div class="upload-container" id="upload-box">
-        <p>PDF dosyanızı buraya sürükleyin veya tıklayarak yükleyin.</p>
-        <input type="file" id="fileInput" accept="application/pdf" hidden>
-    </div>
-    <br>
-    <button type="submit">Makale Gönder</button>
+
+    <form id="uploadForm">
+        <input type="email" id="emailInput" placeholder="E-posta adresinizi girin" required>
+        <br><br>
+        <div class="upload-container" id="upload-box">
+            <p>PDF dosyanızı buraya sürükleyin veya tıklayarak yükleyin.</p>
+            <input type="file" id="fileInput" accept="application/pdf" hidden>
+        </div>
+        <br>
+        <button type="submit">Makale Gönder</button>
+    </form>
     
     <button class="right-bottom">Makale Sorgula</button>
 
     <script>
-        const uploadBox = document.getElementById("upload-box");
-        const fileInput = document.getElementById("fileInput");
+        document.addEventListener("DOMContentLoaded", function () {
+            const uploadBox = document.getElementById("upload-box");
+            const fileInput = document.getElementById("fileInput");
+            const uploadForm = document.getElementById("uploadForm");
+            const emailInput = document.getElementById("emailInput");
 
-        uploadBox.addEventListener("click", () => fileInput.click());
+            uploadBox.addEventListener("click", () => fileInput.click());
 
-        uploadBox.addEventListener("dragover", (event) => {
-            event.preventDefault();
-            uploadBox.classList.add("dragover");
-        });
+            uploadBox.addEventListener("dragover", (event) => {
+                event.preventDefault();
+                uploadBox.classList.add("dragover");
+            });
 
-        uploadBox.addEventListener("dragleave", () => uploadBox.classList.remove("dragover"));
+            uploadBox.addEventListener("dragleave", () => uploadBox.classList.remove("dragover"));
 
-        uploadBox.addEventListener("drop", (event) => {
-            event.preventDefault();
-            uploadBox.classList.remove("dragover");
-            const files = event.dataTransfer.files;
-            if (files.length > 0 && files[0].type === "application/pdf") {
-                fileInput.files = files;
-            } else {
-                alert("Lütfen sadece PDF dosyası yükleyin.");
-            }
+            uploadBox.addEventListener("drop", (event) => {
+                event.preventDefault();
+                uploadBox.classList.remove("dragover");
+                const files = event.dataTransfer.files;
+                if (files.length > 0 && files[0].type === "application/pdf") {
+                    fileInput.files = files;
+                } else {
+                    alert("Lütfen sadece PDF dosyası yükleyin.");
+                }
+            });
+
+            uploadForm.addEventListener("submit", async (event) => {
+                event.preventDefault();
+
+                const formData = new FormData();
+                formData.append("email", emailInput.value);
+                formData.append("file", fileInput.files[0]);
+
+                if (!emailInput.value) {
+                    alert("Lütfen e-posta adresinizi girin.");
+                    return;
+                }
+                if (!fileInput.files.length) {
+                    alert("Lütfen bir PDF dosyası seçin.");
+                    return;
+                }
+
+                try {
+                    const response = await fetch("/uploadarticle/", {
+                        method: "POST",
+                        body: formData
+                    });
+
+                    const result = await response.json();
+                    if (response.ok) {
+                        alert(`Başarılı! Takip numaranız: ${result.tracking_no}`);
+                    } else {
+                        alert(`Hata: ${result.error}`);
+                    }
+                } catch (error) {
+                    alert("Sunucu hatası! Lütfen tekrar deneyin.");
+                }
+            });
         });
     </script>
 </body>

@@ -139,6 +139,7 @@ class Messages(models.Model):
     id = models.AutoField(db_column='ID', primary_key=True)  # Field name made lowercase.
     sender = models.CharField(db_column='SENDER', max_length=30, db_collation='Turkish_CI_AS', blank=True, null=True)  # Field name made lowercase.
     message = models.CharField(db_column='MESSAGE', max_length=400, db_collation='Turkish_CI_AS', blank=True, null=True)  # Field name made lowercase.
+    receiver = models.CharField(db_column='RECEIVER', max_length=30, db_collation='Turkish_CI_AS', blank=True, null=True)  # Field name made lowercase.
 
     class Meta:
         managed = False
