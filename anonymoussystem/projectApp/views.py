@@ -53,15 +53,20 @@ def assign_referee(request, article_id):
 
 def refereeassessment(request, article_id):
     """Hakemin değerlendirme yazacağı sayfa"""
-    article = get_object_or_404(EditorReferee, id=article_id)  # ID, artık `EditorReferee`'den geliyor!
+    article = get_object_or_404(EditorReferee, id=article_id)  # EditorReferee tablosundan al
 
     if request.method == "POST":
-        assessment_text = request.POST.get("assessment")
+        assessment_text = request.POST.get("assessment", "").strip().encode("utf-8")
+        explanation_text = request.POST.get("explanation", "").strip()
+        final_assessment_text = request.POST.get("final_assessment_article", "").strip().encode("utf-8")  # Formdaki isimle eşleşmeli!
 
-        if assessment_text:
-            article.assessment = assessment_text.encode("utf-8")  # Stringi binary olarak sakla
-            article.save()
-            return redirect("projectApp:referee")  # Değerlendirme bitince geri yönlendir
+        # Değerleri uygun formatta kaydet
+        article.assessment = assessment_text if assessment_text else None
+        article.explanation = explanation_text if explanation_text else None
+        article.final_assessment_article = final_assessment_text if final_assessment_text else None
+
+        article.save()
+        return redirect("projectApp:referee")  # Değerlendirme tamamlandığında yönlendir
 
     return render(request, "refereeassessment.html", {"article": article})
 
@@ -205,23 +210,25 @@ def anonymize_pdf(article):
     manual_names_to_blur = {"MAJITHIA TEJAS VINODBHAI"}
     author_names.update(manual_names_to_blur)
     
-    # Sansürlenmemesi gereken başlık tam cümle olarak saklanıyor
-    exclude_title = "Emotion Recognition Using Temporally Localized Emotional Events in EEG With Naturalistic Context: DENS# Dataset"
+    # Sansürlenmemesi gereken başlıkları liste olarak saklıyoruz
+    exclude_titles = [
+        "Emotion Recognition Using Temporally Localized Emotional Events in EEG With Naturalistic Context: DENS# Dataset",
+        "EEG signal processing and emotion recognition using Convolutional Neural Network"
+    ]
     
     for page_num in target_pages:
         page = doc[page_num]
         page_text = page.get_text("text")
-        page_lines = page_text.split("\n")[:3]  # Sayfanın ilk 3 satırını kontrol et
+        page_lines = [line.strip().lower() for line in page_text.split("\n")[:5]]  # İlk 5 satırı al ve küçük harfe çevir
         
-        # Eğer başlık üst kısımdaysa, sayfanın geri kalanını işlemeye devam et
-        is_title_page = any(exclude_title in line for line in page_lines)
+        # Eğer başlık tam olarak sayfada varsa o sayfada sansürleme yapma
+        if any(title.lower() in page_lines for title in exclude_titles):
+            continue  
         
         for name in author_names:
             text_instances = page.search_for(name)
-            blurred_text = "*" * len(name)  # Tek tip yıldız sansürü
+            blurred_text = " " * len(name)  # Yeni blur karakteri
             for inst in text_instances:
-                if is_title_page and inst.y0 < 150:  
-                    continue  # Eğer başlık sayfasında ve üst kısımda ise geç
                 rect = fitz.Rect(inst.x0, inst.y0, inst.x1, inst.y1)
                 page.draw_rect(rect, color=(1, 1, 1), fill=(1, 1, 1))
                 page.insert_textbox(rect, blurred_text, fontsize=12, color=(0, 0, 0), align=fitz.TEXT_ALIGN_CENTER)
@@ -229,18 +236,14 @@ def anonymize_pdf(article):
         for email in emails:
             text_instances = page.search_for(email)
             for inst in text_instances:
-                if is_title_page and inst.y0 < 150:  
-                    continue
                 rect = fitz.Rect(inst.x0, inst.y0, inst.x1, inst.y1)
                 page.draw_rect(rect, color=(1, 1, 1), fill=(1, 1, 1))
-                page.insert_textbox(rect, "*" * len(email), fontsize=12, color=(0, 0, 0), align=fitz.TEXT_ALIGN_CENTER)
+                page.insert_textbox(rect, " " * len(email), fontsize=12, color=(0, 0, 0), align=fitz.TEXT_ALIGN_CENTER)
 
         for institution in institutions:
             text_instances = page.search_for(institution)
-            blurred_text = "*" * len(institution)
+            blurred_text = " " * len(institution)  # Yeni blur karakteri
             for inst in text_instances:
-                if is_title_page and inst.y0 < 150:  
-                    continue
                 rect = fitz.Rect(inst.x0, inst.y0, inst.x1, inst.y1)
                 page.draw_rect(rect, color=(1, 1, 1), fill=(1, 1, 1))
                 page.insert_textbox(rect, blurred_text, fontsize=12, color=(0, 0, 0), align=fitz.TEXT_ALIGN_CENTER)

@@ -12,8 +12,17 @@
 
     <form method="POST">
         {% csrf_token %}
-        <label for="assessment">Değerlendirmenizi Girin:</label><br>
-        <textarea name="assessment" rows="5" cols="50" required></textarea><br>
+        
+        <label for="assessment">Değerlendirme:</label><br>
+        <textarea name="assessment" rows="5" cols="50" required>{{ article.assessment|default:"" }}</textarea><br>
+
+        <label for="explanation">Açıklama:</label><br>
+        <textarea name="explanation" rows="5" cols="50">{{ article.explanation|default:"" }}</textarea><br>
+
+        <label for="final_assessment_article">Nihai Değerlendirme (Makale İçin):</label><br>
+        <input type="text" name="final_assessment_article" value="{{ article.final_assessment_article|default:'' }}"><br>
+        
+
         <button type="submit">Gönder</button>
     </form>
 </body>
