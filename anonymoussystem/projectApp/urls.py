@@ -18,4 +18,5 @@ urlpatterns = [
     path('view_article/<int:article_id>/', views.view_article_pdf, name='view_article_pdf'),
     path('anonymize_article/<int:article_id>/', views.anonymize_article, name='anonymize_article'),
     path('deanonymize_article/<int:article_id>/', views.deanonymize_article, name='deanonymize_article'),
+    path('check_article_status/', views.check_article_status, name='check_article_status'),
 ]

@@ -1,26 +1,28 @@
-from django.shortcuts import render, get_object_or_404
-import os
-import struct
-from django.http import JsonResponse, HttpResponse
+from django.shortcuts import render, get_object_or_404, redirect
+from django.http import JsonResponse, HttpResponse, FileResponse
 from django.views.decorators.csrf import csrf_exempt
-from Cryptodome.Cipher import AES
 from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
-from .models import UserEditor, Messages, EditorReferee   # Modelini dahil etmeyi unutma!
+from django.core.mail import send_mail
+
+import os
+import struct
 import json
-import spacy
 import base64
-import fitz  # PyMuPDF
-import io
 import re
-from django.http import FileResponse
-from django.shortcuts import render, get_object_or_404, redirect
+import io
+
+import fitz  # PyMuPDF
+import spacy
 from PIL import Image, ImageFilter
+from Cryptodome.Cipher import AES
+
+from .models import UserEditor, Messages, EditorReferee  # Model bağlantıları
+
 
 def mainpage(request):
     return render(request, 'mainpage.html')
 
-#########################################################################
 def referee(request):
     """Hakemin atanmış makalelerini listele"""
     email = request.GET.get("email", "").strip()
@@ -79,44 +81,67 @@ def admin(request):
 
 def generate_tracking_number():
     """AES kullanarak 7 basamaklı benzersiz bir takip numarası üretir."""
-    random_data = os.urandom(16)
-    cipher = AES.new(os.urandom(16), AES.MODE_ECB)
-    encrypted_data = cipher.encrypt(random_data)
+    random_data = os.urandom(16)  # Rastgele 16 bayt veri üret
+    cipher = AES.new(b'S3cr3tAESKey1234', AES.MODE_ECB)  # Sabit AES anahtarı
+    encrypted_data = cipher.encrypt(random_data)  # Rastgele veriyi AES ile şifrele
+
+    # Şifrelenmiş ilk 8 baytı alıp tam sayıya çeviriyoruz
     numeric_value = struct.unpack("Q", encrypted_data[:8])[0]
-    return str(numeric_value % 9000000 + 1000000)
+
+    # 7 basamaklı bir takip numarası elde etmek için mod işlemi
+    return str(numeric_value % 9000000 + 1000000)  # 1000000-9999999 arası sayı üret
+
 
 
 @csrf_exempt
 def uploadarticle(request):
-    """E-posta ve PDF dosyasını veritabanına kaydeder."""
+    """Makale yükleme işlemi: PDF dosyasını kaydeder, AES ile takip numarası üretir ve e-posta gönderir."""
     
-    if request.method == 'GET':
-        return render(request, 'uploadarticle.html')
+    if request.method == "GET":
+        return render(request, 'uploadarticle.html')  # GET isteği için sayfayı döndür
 
-    if request.method == 'POST':
-        email = request.POST.get('email')
-        pdf_file = request.FILES.get('file')
+    if request.method == "POST":
+        email = request.POST.get("email")  # Kullanıcının e-posta adresini al
+        pdf_file = request.FILES.get("file")  # Kullanıcının yüklediği PDF dosyasını al
 
+        # Gerekli alanlar boş mu?
         if not email or not pdf_file:
             return JsonResponse({"error": "Lütfen e-posta adresinizi girin ve bir PDF yükleyin."}, status=400)
 
+        # AES ile benzersiz takip numarası oluştur
         tracking_number = generate_tracking_number()
+
+        # PDF dosyasını binary olarak oku
         pdf_binary_data = pdf_file.read()
 
-        user_article = UserEditor(
-            tracking_no=tracking_number,
-            owner_email=email,
-            raw_article=pdf_binary_data
-        )
-        user_article.save()
+        try:
+            # Veritabanına kaydet
+            user_article = UserEditor(
+                tracking_no=tracking_number,
+                owner_email=email,
+                raw_article=pdf_binary_data
+            )
+            user_article.save()
 
-        return JsonResponse({"success": "Makale başarıyla yüklendi.", "tracking_no": tracking_number})
+            # Kullanıcıya takip numarasını içeren e-posta gönder
+            send_mail(
+                "Makale Takip Numaranız",
+                f"Merhaba,\n\nMakaleniz başarıyla sisteme yüklendi.\nTakip numaranız: {tracking_number}\n\nBu numarayı kullanarak makalenizin durumunu sorgulayabilirsiniz.",
+                "omer2020084@gmail.com",  # Burada kendi SMTP e-posta adresini kullan
+                [email],
+                fail_silently=False,
+            )
+
+
+            return JsonResponse({
+                "success": "Makale başarıyla yüklendi.",
+                "tracking_no": tracking_number
+            })
+
+        except Exception as e:
+            return JsonResponse({"error": f"Bir hata oluştu: {str(e)}"}, status=500)
 
     return JsonResponse({"error": "Geçersiz istek."}, status=400)
-
-
-def queryarticle(request):
-    return render(request, 'queryarticle.html')
 
 
 @csrf_exempt
@@ -165,6 +190,31 @@ def get_referee_documents(request):
     
     return JsonResponse(documents_list, safe=False)
 
+@csrf_exempt
+def check_article_status(request):
+    """Takip numarasına göre makalenin durumunu sorgular."""
+    if request.method == "POST":
+        data = json.loads(request.body)
+        tracking_no = data.get("tracking_no")
+
+        if not tracking_no:
+            return JsonResponse({"error": "Takip numarası gereklidir."}, status=400)
+
+        try:
+            article = UserEditor.objects.get(tracking_no=tracking_no)
+            return JsonResponse({
+                "tracking_no": article.tracking_no,
+                "owner_email": article.owner_email,
+                "status": "İnceleniyor"  # İlerleyen süreçlerde durumu güncelleyebilirsin.
+            })
+        except UserEditor.DoesNotExist:
+            return JsonResponse({"error": "Geçersiz takip numarası."}, status=404)
+
+    return JsonResponse({"error": "Geçersiz istek."}, status=400)
+
+def queryarticle(request):
+    """Makale sorgulama sayfasını açar."""
+    return render(request, 'queryarticle.html')
 
 
 
@@ -182,7 +232,8 @@ def extract_author_info(text):
     doc = nlp(text)
     
     exclude_terms = {"Database", "IEEE", "System", "Model", "Analysis", "Emotion Recognition Using Temporally Localized",
-            "Emotional Events in EEG With Naturalistic Context"}
+            "Emotional Events in EEG With Naturalistic Context", 
+            "An Efficient Approach to EEG-Based Emotion Recognition using LSTM Network"}
     
     for ent in doc.ents:
         if ent.label_ == "PERSON":
@@ -199,50 +250,42 @@ def anonymize_pdf(article):
     doc = fitz.open(stream=article.raw_article, filetype="pdf")
     total_pages = len(doc)
 
-    # İlk 2 ve son 2 sayfayı işle
-    target_pages = list(range(2)) + list(range(total_pages - 2, total_pages))
+    target_pages = list(range(1)) + list(range(total_pages - 2, total_pages))
     
     text = "".join([doc[page].get_text("text") for page in target_pages])
 
     author_names, emails, institutions = extract_author_info(text)
     
     # Manuel olarak sansürlenmesi gereken isimleri ekleyelim
-    manual_names_to_blur = {"MAJITHIA TEJAS VINODBHAI"}
+    manual_names_to_blur = {"MAJITHIA TEJAS VINODBHAI", "Kumar", "Hazarika", "Liu", "Atkinson", "Acharya", "Tripathi", "Sharma", "Bhattacharya", "Anubhav", "Debarshi",
+                             "Takahashi", "Grandjean", "Nath"}
     author_names.update(manual_names_to_blur)
     
-    # Sansürlenmemesi gereken başlıkları liste olarak saklıyoruz
+    # Sansürlenmemesi gereken başlıklar
     exclude_titles = [
         "Emotion Recognition Using Temporally Localized Emotional Events in EEG With Naturalistic Context: DENS# Dataset",
-        "EEG signal processing and emotion recognition using Convolutional Neural Network"
+        "EEG signal processing and emotion recognition using Convolutional Neural Network",
+        "An Efficient Approach to EEG-Based Emotion Recognition using LSTM Network"
     ]
     
     for page_num in target_pages:
         page = doc[page_num]
         page_text = page.get_text("text")
-        page_lines = [line.strip().lower() for line in page_text.split("\n")[:5]]  # İlk 5 satırı al ve küçük harfe çevir
+        page_lines = page_text.lower().split("\n")  # Tüm satırları al
         
-        # Eğer başlık tam olarak sayfada varsa o sayfada sansürleme yapma
-        if any(title.lower() in page_lines for title in exclude_titles):
+        # Sayfadaki metnin herhangi bir yerinde başlıklar var mı kontrol et
+        if any(title.lower() in page_text.lower() for title in exclude_titles):
             continue  
-        
-        for name in author_names:
-            text_instances = page.search_for(name)
-            blurred_text = " " * len(name)  # Yeni blur karakteri
-            for inst in text_instances:
-                rect = fitz.Rect(inst.x0, inst.y0, inst.x1, inst.y1)
-                page.draw_rect(rect, color=(1, 1, 1), fill=(1, 1, 1))
-                page.insert_textbox(rect, blurred_text, fontsize=12, color=(0, 0, 0), align=fitz.TEXT_ALIGN_CENTER)
 
-        for email in emails:
-            text_instances = page.search_for(email)
-            for inst in text_instances:
-                rect = fitz.Rect(inst.x0, inst.y0, inst.x1, inst.y1)
-                page.draw_rect(rect, color=(1, 1, 1), fill=(1, 1, 1))
-                page.insert_textbox(rect, " " * len(email), fontsize=12, color=(0, 0, 0), align=fitz.TEXT_ALIGN_CENTER)
+        # Sansürlenecek kelimeler
+        words_to_blur = set(author_names) | set(emails) | set(institutions)
 
-        for institution in institutions:
-            text_instances = page.search_for(institution)
-            blurred_text = " " * len(institution)  # Yeni blur karakteri
+        for word in words_to_blur:
+            if any(word.lower() in title.lower() for title in exclude_titles):
+                continue  # Eğer kelime başlığın içinde geçiyorsa sansürleme
+            
+            text_instances = page.search_for(word)
+            blurred_text = " " * len(word)
             for inst in text_instances:
                 rect = fitz.Rect(inst.x0, inst.y0, inst.x1, inst.y1)
                 page.draw_rect(rect, color=(1, 1, 1), fill=(1, 1, 1))

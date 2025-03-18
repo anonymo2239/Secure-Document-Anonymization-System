@@ -4,13 +4,113 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Main Page</title>
+
+    <style>
+        /* Genel Sayfa Stili */
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #3498db, #2c3e50);
+            color: white;
+            text-align: center;
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* İçerik Kutusu */
+        .container {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0px 4px 15px rgba(0, 0, 0, 0.2);
+            backdrop-filter: blur(10px);
+            width: 90%;
+            max-width: 400px;
+            animation: fadeIn 1s ease-in-out;
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 24px;
+            margin-bottom: 20px;
+            animation: slideDown 1s ease-in-out;
+        }
+
+        /* Buton Stilleri */
+        .menu-button {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%; /* Butonları eşit genişlikte yap */
+            max-width: 320px; /* Maksimum genişlik ayarla */
+            height: 50px; /* Yükseklik sabitle */
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 2px solid white;
+            font-size: 18px;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease-in-out;
+            text-decoration: none;
+            margin: 10px auto; /* Butonları ortala */
+        }
+
+        .menu-button:hover {
+            background: white;
+            color: #2c3e50;
+            transform: scale(1.05);
+        }
+
+        /* Animasyonlar */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-50px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Responsive Tasarım */
+        @media (max-width: 600px) {
+            .container {
+                width: 90%;
+            }
+
+            .menu-button {
+                font-size: 16px;
+                height: 45px;
+            }
+        }
+    </style>
 </head>
 <body>
-    <h1>Welcome to Main Page</h1>
-    
-    <a href="{% url 'projectApp:referee' %}"><button>Referee Page</button></a>
-    <a href="{% url 'projectApp:adminpage' %}"><button>Admin Page</button></a>
-    <a href="{% url 'projectApp:uploadarticle' %}"><button>Upload Article</button></a>
-    <a href="{% url 'projectApp:queryarticle' %}"><button>Query Article</button></a>
+
+    <div class="container">
+        <h1>Welcome to Main Page</h1>
+
+        <a href="{% url 'projectApp:referee' %}" class="menu-button">👨‍⚖️ Referee Page</a>
+        <a href="{% url 'projectApp:adminpage' %}" class="menu-button">🔧 Admin Page</a>
+        <a href="{% url 'projectApp:uploadarticle' %}" class="menu-button">📤 Upload Article</a>
+        <a href="{% url 'projectApp:queryarticle' %}" class="menu-button">🔍 Query Article</a>
+    </div>
+
 </body>
 </html>

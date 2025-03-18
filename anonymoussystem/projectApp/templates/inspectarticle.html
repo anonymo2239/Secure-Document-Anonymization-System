@@ -5,6 +5,74 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Makale İnceleme</title>
+    
+    <!-- Stil Dosyaları -->
+    <style>
+        /* Genel Sayfa Stili */
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f9;
+            color: #333;
+            margin: 20px;
+            text-align: center;
+        }
+
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+        }
+
+        /* Buton Stilleri */
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 5px;
+            margin: 5px;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        button:hover {
+            background-color: #2980b9;
+        }
+
+        /* PDF Çerçevesi */
+        iframe {
+            width: 80%;
+            height: 800px;
+            border: 2px solid #ccc;
+            border-radius: 8px;
+            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.2);
+            margin-top: 20px;
+        }
+
+        /* Bağlantı Stili */
+        a {
+            text-decoration: none;
+            color: #3498db;
+            font-weight: bold;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+
+        /* Responsive Tasarım */
+        @media (max-width: 768px) {
+            iframe {
+                width: 100%;
+                height: 600px;
+            }
+            button {
+                width: 90%;
+                padding: 12px;
+            }
+        }
+    </style>
+
+    <!-- JavaScript -->
     <script>
         function loadAnonymized() {
             let timestamp = new Date().getTime();
@@ -66,12 +134,14 @@
 </head>
 <body>
     <h1>Makale İnceleme</h1>
+    
     {% if pdf_url %}
         <p><a href="{{ pdf_url }}" download="makale.pdf">📥 PDF'yi İndir</a></p>
         <button onclick="loadAnonymized()">🔒 Anonimleştir</button>
         <button onclick="restoreOriginal()">🛠 Orijinal Bilgileri Geri Yükle</button>
         <button onclick="saveCurrentPdf()">💾 Anonimleştirilmiş PDF'i Kaydet</button>
-        <iframe id="pdf-frame" src="{{ pdf_url }}?t={{ timestamp }}" width="100%" height="800px"></iframe>
+        
+        <iframe id="pdf-frame" src="{{ pdf_url }}?t={{ timestamp }}"></iframe>
     {% else %}
         <p>PDF yüklenemedi veya bulunamadı.</p>
     {% endif %}

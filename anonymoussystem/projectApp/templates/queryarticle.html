@@ -6,42 +6,214 @@
     <title>Makale Sorgula</title>
     <style>
         body {
-            font-family: Arial, sans-serif;
-            text-align: center;
-            padding: 20px;
-        }
-        .chat-container {
-            width: 50%;
-            margin: 20px auto;
-            border: 1px solid #ccc;
-            padding: 10px;
-            height: 300px;
-            overflow-y: auto;
-            text-align: left;
-            background: #f9f9f9;
-            display: none; /* Başlangıçta gizli */
-        }
-        .message-box {
-            width: 50%;
-            margin: 10px auto;
-            display: none; /* Başlangıçta gizli */
-            gap: 10px;
-            display: flex;
-        }
-        .message-box input {
-            flex: 1;
-            padding: 5px;
-        }
+    font-family: 'Arial', sans-serif;
+    text-align: center;
+    background: linear-gradient(135deg, #3498db, #2c3e50);
+    color: white;
+    margin: 0;
+    padding: 0;
+}
+
+/* İçerik Kutusu */
+.container {
+    background: rgba(255, 255, 255, 0.1);
+    padding: 30px;
+    border-radius: 15px;
+    box-shadow: 0px 4px 15px rgba(0, 0, 0, 0.2);
+    backdrop-filter: blur(10px);
+    width: 80%;
+    max-width: 500px;
+    margin: 50px auto;
+    animation: fadeIn 1s ease-in-out;
+}
+
+/* Başlık Stili */
+h2 {
+    font-size: 24px;
+    margin-bottom: 20px;
+    animation: slideDown 1s ease-in-out;
+}
+
+/* Input Kutusu */
+input[type="text"] {
+    width: 10%;
+    padding: 10px;
+    font-size: 16px;
+    border: 2px solid white;
+    border-radius: 5px;
+    margin-top: 10px;
+    outline: none;
+    transition: 0.3s;
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    text-align: center;
+}
+
+input[type="text"]::placeholder {
+    color: rgba(255, 255, 255, 0.7);
+}
+
+input[type="text"]:focus {
+    border-color: #f1c40f;
+}
+
+/* Buton Stili */
+button {
+    background-color: #f1c40f;
+    color: black;
+    border: none;
+    padding: 12px 20px;
+    font-size: 16px;
+    font-weight: bold;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: 0.3s;
+    margin-top: 15px;
+}
+
+button:hover {
+    background-color: #d4ac0d;
+}
+
+/* Sonuç Bölümü */
+#resultContainer {
+    background: rgba(255, 255, 255, 0.15);
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.2);
+    margin-top: 20px;
+}
+
+/* Mesajlaşma Kutusu */
+.chat-container {
+    width: 60%;
+    margin: 20px auto;
+    border: 2px solid white;
+    padding: 15px;
+    height: 300px;
+    overflow-y: auto;
+    text-align: left;
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 8px;
+    display: none; /* Başlangıçta gizli */
+}
+
+/* Mesaj Gönderme Alanı */
+.message-box {
+    width: 60%;
+    margin: 10px auto;
+    display: none; /* Başlangıçta gizli */
+    gap: 10px;
+    display: flex;
+    align-items: center;
+}
+
+.message-box input {
+    flex: 1;
+    padding: 10px;
+    font-size: 16px;
+    border: 2px solid white;
+    border-radius: 5px;
+    outline: none;
+    transition: 0.3s;
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+}
+
+.message-box input::placeholder {
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.message-box button {
+    background-color: #2ecc71;
+    color: white;
+}
+
+.message-box button:hover {
+    background-color: #27ae60;
+}
+
+/* Mesaj Stilleri */
+.message {
+    padding: 10px;
+    border-radius: 5px;
+    margin: 5px 0;
+    width: fit-content;
+    max-width: 80%;
+    word-wrap: break-word;
+}
+
+.sent {
+    background: #3498db;
+    color: white;
+    text-align: right;
+    margin-left: auto;
+}
+
+.received {
+    background: #2ecc71;
+    color: white;
+    text-align: left;
+}
+
+/* Animasyonlar */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-50px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Responsive Tasarım */
+@media (max-width: 600px) {
+    .container {
+        width: 90%;
+    }
+
+    input[type="text"], .message-box input {
+        width: 100%;
+    }
+
+    .chat-container, .message-box {
+        width: 90%;
+    }
+
+    button {
+        width: 100%;
+    }
+}
     </style>
 </head>
 <body>
     <h2>Makale Sorgula</h2>
 
-    <!-- E-posta giriş alanı -->
-    <div id="emailContainer">
-        <input type="email" id="emailInput" placeholder="E-posta adresinizi girin" required>
+    <!-- Takip numarası giriş alanı -->
+    <div id="trackingContainer">
+        <input type="text" id="trackingInput" placeholder="Takip numaranızı girin" required>
         <br><br>
-        <button onclick="setEmail()">Onayla</button>
+        <button onclick="queryArticle()">Sorgula</button>
+    </div>
+
+    <!-- Sonuç gösterme alanı -->
+    <div id="resultContainer" style="display:none;">
+        <p><strong>Makale Sahibi:</strong> <span id="ownerEmail"></span></p>
+        <p><strong>Makale Durumu:</strong> <span id="articleStatus"></span></p>
+        <button onclick="startChat()">Admin ile İletişime Geç</button>
     </div>
 
     <!-- Mesajlaşma alanı -->
@@ -55,73 +227,99 @@
 
     <script>
         let userEmail = "";
-    
-        function setEmail() {
-            const emailInput = document.getElementById("emailInput");
-            if (!emailInput.value.trim()) {
-                alert("Lütfen e-posta adresinizi girin.");
-                return;
-            }
-            userEmail = emailInput.value.trim();
-    
-            document.getElementById("emailContainer").style.display = "none";
-            document.getElementById("chatBox").style.display = "block";
-            document.getElementById("messageContainer").style.display = "flex";
-    
-            loadMessages();
+let trackingNo = "";
+
+async function queryArticle() {
+    trackingNo = document.getElementById("trackingInput").value.trim();
+    if (!trackingNo) {
+        alert("Lütfen takip numaranızı girin.");
+        return;
+    }
+
+    try {
+        const response = await fetch("/check_article_status/", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ tracking_no: trackingNo })
+        });
+
+        const result = await response.json();
+
+        if (response.ok) {
+            document.getElementById("ownerEmail").textContent = result.owner_email;
+            document.getElementById("articleStatus").textContent = result.status;
+            document.getElementById("resultContainer").style.display = "block";
+            userEmail = result.owner_email;
+        } else {
+            alert(result.error);
         }
-    
-        async function sendMessage() {
-            const messageInput = document.getElementById("messageInput");
-            const messageText = messageInput.value.trim();
-            const receiver = "admin"; // Kullanıcı mesajı admin'e gönderiyor
-    
-            if (!userEmail || !receiver || !messageText) {
-                alert("Gönderen, alıcı ve mesaj boş olamaz!");
-                return;
-            }
-    
-            try {
-                const response = await fetch("/send_message/", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ sender: userEmail, receiver: receiver, message: messageText })
-                });
-    
-                if (response.ok) {
-                    appendMessage(userEmail, messageText);
-                    messageInput.value = "";
-                } else {
-                    alert("Mesaj gönderilirken hata oluştu.");
-                }
-            } catch (error) {
-                alert("Bağlantı hatası!");
-            }
+    } catch (error) {
+        alert("Makale sorgulanırken hata oluştu.");
+    }
+}
+
+function startChat() {
+    if (!userEmail) {
+        alert("Makale sahibi bilgisi bulunamadı.");
+        return;
+    }
+
+    document.getElementById("resultContainer").style.display = "none";
+    document.getElementById("chatBox").style.display = "block";
+    document.getElementById("messageContainer").style.display = "flex";
+    loadMessages();
+}
+
+async function sendMessage() {
+    const messageInput = document.getElementById("messageInput");
+    const messageText = messageInput.value.trim();
+    const receiver = "admin";
+
+    if (!userEmail || !receiver || !messageText) {
+        alert("Gönderen, alıcı ve mesaj boş olamaz!");
+        return;
+    }
+
+    try {
+        const response = await fetch("/send_message/", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ sender: userEmail, receiver: receiver, message: messageText })
+        });
+
+        if (response.ok) {
+            appendMessage(userEmail, messageText);
+            messageInput.value = "";
+        } else {
+            alert("Mesaj gönderilirken hata oluştu.");
         }
-    
-        async function loadMessages() {
-            try {
-                const response = await fetch(`/get_messages/?email=${userEmail}&receiver=admin`);
-                const messages = await response.json();
-                const chatBox = document.getElementById("chatBox");
-                chatBox.innerHTML = "";
-    
-                messages.forEach(msg => {
-                    appendMessage(msg.sender, msg.message);
-                });
-            } catch (error) {
-                alert("Mesajlar yüklenirken hata oluştu.");
-            }
-        }
-    
-        function appendMessage(sender, message) {
-            const chatBox = document.getElementById("chatBox");
-            const newMessage = document.createElement("p");
-            newMessage.innerHTML = `<strong>${sender}:</strong> ${message}`;
-            chatBox.appendChild(newMessage);
-            chatBox.scrollTop = chatBox.scrollHeight;
-        }
+    } catch (error) {
+        alert("Bağlantı hatası!");
+    }
+}
+
+async function loadMessages() {
+    try {
+        const response = await fetch(`/get_messages/?email=${encodeURIComponent(userEmail)}&receiver=admin`);
+        const messages = await response.json();
+        const chatBox = document.getElementById("chatBox");
+        chatBox.innerHTML = "";
+
+        messages.forEach(msg => {
+            appendMessage(msg.sender, msg.message);
+        });
+    } catch (error) {
+        alert("Mesajlar yüklenirken hata oluştu.");
+    }
+}
+
+function appendMessage(sender, message) {
+    const chatBox = document.getElementById("chatBox");
+    const newMessage = document.createElement("p");
+    newMessage.innerHTML = `<strong>${sender}:</strong> ${message}`;
+    chatBox.appendChild(newMessage);
+    chatBox.scrollTop = chatBox.scrollHeight;
+}
     </script>
-    
 </body>
 </html>

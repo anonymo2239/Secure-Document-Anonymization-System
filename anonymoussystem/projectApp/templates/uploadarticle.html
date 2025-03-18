@@ -5,26 +5,153 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Makale Yükleme</title>
     <style>
+        /* Genel Sayfa Stili */
         body {
-            font-family: Arial, sans-serif;
+            font-family: 'Arial', sans-serif;
             text-align: center;
-            padding: 20px;
+            background: linear-gradient(135deg, #3498db, #2c3e50);
+            color: white;
+            margin: 0;
+            padding: 0;
         }
+
+        /* İçerik Kutusu */
+        .container {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0px 4px 15px rgba(0, 0, 0, 0.2);
+            backdrop-filter: blur(10px);
+            width: 80%;
+            max-width: 500px;
+            margin: 50px auto;
+            animation: fadeIn 1s ease-in-out;
+        }
+
+        /* Başlık Stili */
+        h2 {
+            font-size: 24px;
+            margin-bottom: 20px;
+            animation: slideDown 1s ease-in-out;
+        }
+
+        /* E-Posta Giriş Alanı */
+        input[type="email"] {
+            width: 20%;
+            padding: 10px;
+            font-size: 16px;
+            border: 2px solid white;
+            border-radius: 5px;
+            margin-top: 10px;
+            outline: none;
+            transition: 0.3s;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            text-align: center;
+        }
+
+        input[type="email"]::placeholder {
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        input[type="email"]:focus {
+            border-color: #f1c40f;
+        }
+
+        /* Yükleme Kutusu */
         .upload-container {
+            width: 80%;
+            max-width: 400px;
             margin: 20px auto;
-            width: 50%;
-            padding: 20px;
-            border: 2px dashed #ccc;
+            padding: 30px;
+            border: 3px dashed white;
+            border-radius: 10px;
             text-align: center;
+            cursor: pointer;
+            transition: 0.3s;
+            background: rgba(255, 255, 255, 0.15);
         }
-        .upload-container.dragover {
-            border-color: #000;
+
+        .upload-container:hover {
+            border-color: #f1c40f;
         }
+
+        /* Buton Stili */
+        button {
+            background-color: #f1c40f;
+            color: black;
+            border: none;
+            padding: 12px 20px;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: 0.3s;
+            margin-top: 15px;
+        }
+
+        button:hover {
+            background-color: #d4ac0d;
+        }
+
+        /* Sağ Alt Köşede Makale Sorgula Butonu */
         .right-bottom {
             position: fixed;
             bottom: 20px;
             right: 20px;
+            background-color: #2ecc71;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: 0.3s;
+            border: none;
+            font-size: 14px;
+            font-weight: bold;
         }
+
+        .right-bottom:hover {
+            background-color: #27ae60;
+        }
+
+        /* Animasyonlar */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-50px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Responsive Tasarım */
+        @media (max-width: 600px) {
+            .container {
+                width: 90%;
+            }
+
+            input[type="email"], .upload-container {
+                width: 90%;
+            }
+
+            button {
+                width: 100%;
+            }
+        }
+
     </style>
 </head>
 <body>
