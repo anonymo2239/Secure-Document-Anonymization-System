@@ -1,11 +1,15 @@
 from django.shortcuts import render, get_object_or_404, redirect
-from django.http import JsonResponse, HttpResponse, FileResponse
+from django.http import JsonResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.core.files.storage import default_storage
-from django.core.files.base import ContentFile
 from django.core.mail import send_mail
 from django.utils import timezone
 from django.contrib import messages
+
+import cv2
+import numpy as np
+from pdf2image import convert_from_path
+from fpdf import FPDF
 
 import os
 import struct
@@ -429,6 +433,23 @@ def get_referees(request):
         return JsonResponse(referees_list, safe=False)
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
+    
+
+# Haar Cascade modelini yükleme (yüz tespiti için)
+face_cascade_path = cv2.data.haarcascades + 'haarcascade_frontalface_default.xml'
+face_cascade = cv2.CascadeClassifier(face_cascade_path)
+
+def blur_faces(image):
+    """
+    Yüzleri bulanıklaştırır.
+    """
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    faces = face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5, minSize=(30, 30))
+    for (x, y, w, h) in faces:
+        face_roi = image[y:y+h, x:x+w]
+        blurred_face = cv2.GaussianBlur(face_roi, (99, 99), 30)
+        image[y:y+h, x:x+w] = blurred_face
+    return image
 
 def extract_author_info(text):
     """
@@ -456,7 +477,7 @@ def extract_author_info(text):
 
 def anonymize_pdf(article, blur_names=False, blur_emails=False, blur_institutions=False):
     """
-    PDF'den metni çıkar, sadece yazar isimlerini, e-posta adreslerini ve kurum bilgilerini sansürler.
+    PDF'den metni çıkar, yazar isimlerini, e-posta adreslerini, kurum bilgilerini ve yüzleri sansürler.
     """
     doc = fitz.open(stream=article.raw_article, filetype="pdf")
     total_pages = len(doc)
@@ -487,7 +508,7 @@ def anonymize_pdf(article, blur_names=False, blur_emails=False, blur_institution
         "An Efficient Approach to EEG-Based Emotion Recognition using LSTM Network"
     ]
 
-    for page_num in target_pages:
+    for page_num in range(total_pages):
         page = doc[page_num]
         page_text = page.get_text("text")
 
@@ -495,6 +516,25 @@ def anonymize_pdf(article, blur_names=False, blur_emails=False, blur_institution
         if any(title.lower() in page_text.lower() for title in exclude_titles):
             continue
 
+        # Yüzleri bulanıklaştırma işlemi
+        pix = page.get_pixmap()
+        img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
+        img = np.array(img)
+        img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)  # OpenCV formatına dönüştür
+        img = blur_faces(img)
+
+        # Bulanıklaştırılmış resmi tekrar PDF sayfasına dönüştür
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        pil_img = Image.fromarray(img)
+        img_bytes = io.BytesIO()
+        pil_img.save(img_bytes, format="PNG")
+        img_bytes.seek(0)
+
+        # Sayfayı güncelle
+        rect = fitz.Rect(0, 0, pix.width, pix.height)
+        page.insert_image(rect, stream=img_bytes.getvalue())
+
+        # Metinsel sansür işlemleri
         for word in words_to_blur:
             if any(word.lower() in title.lower() for title in exclude_titles):
                 continue  # Eğer kelime başlığın içinde geçiyorsa sansürleme
