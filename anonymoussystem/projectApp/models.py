@@ -8,6 +8,16 @@
 from django.db import models
 
 
+class Logs(models.Model):
+    log_id = models.AutoField(primary_key=True)
+    log_date = models.DateTimeField(blank=True, null=True)
+    log_details = models.CharField(max_length=255, db_collation='Turkish_CI_AS')
+
+    class Meta:
+        managed = False
+        db_table = 'Logs'
+
+
 class AuthGroup(models.Model):
     name = models.CharField(unique=True, max_length=150, db_collation='Turkish_CI_AS')
 
@@ -123,16 +133,18 @@ class DjangoSession(models.Model):
 
 
 class EditorReferee(models.Model):
-    id = models.AutoField(db_column='ID', primary_key=True)  # Field name made lowercase.
-    referee_email = models.CharField(db_column='REFEREE_EMAIL', max_length=30, db_collation='Turkish_CI_AS')  # Field name made lowercase.
+    id = models.AutoField(db_column='ID', primary_key=True)  # Field name made lowercase. The composite primary key (ID, ARTICLE_ID) found, that is not supported. The first column is selected.
+    referee_email = models.CharField(db_column='REFEREE_EMAIL', max_length=30, db_collation='Turkish_CI_AS', blank=True, null=True)  # Field name made lowercase.
     anonymized_article = models.BinaryField(db_column='ANONYMIZED_ARTICLE', blank=True, null=True)  # Field name made lowercase.
     assessment = models.BinaryField(db_column='ASSESSMENT', blank=True, null=True)  # Field name made lowercase.
     explanation = models.CharField(db_column='EXPLANATION', max_length=200, db_collation='Turkish_CI_AS', blank=True, null=True)  # Field name made lowercase.
     final_assessment_article = models.BinaryField(db_column='FINAL_ASSESSMENT_ARTICLE', blank=True, null=True)  # Field name made lowercase.
+    article_id = models.IntegerField(db_column='ARTICLE_ID')  # Field name made lowercase.
 
     class Meta:
         managed = False
         db_table = 'editor_referee'
+        unique_together = (('id', 'article_id'),)
 
 
 class Messages(models.Model):
@@ -144,6 +156,16 @@ class Messages(models.Model):
     class Meta:
         managed = False
         db_table = 'messages'
+
+
+class Referees(models.Model):
+    referee_id = models.IntegerField(db_column='REFEREE_ID', primary_key=True)  # Field name made lowercase.
+    referee_mail = models.CharField(db_column='REFEREE_MAIL', max_length=30, db_collation='Turkish_CI_AS', blank=True, null=True)  # Field name made lowercase.
+    referee_interests = models.CharField(db_column='REFEREE_INTERESTS', max_length=200, db_collation='Turkish_CI_AS', blank=True, null=True)  # Field name made lowercase.
+
+    class Meta:
+        managed = False
+        db_table = 'referees'
 
 
 class UserEditor(models.Model):

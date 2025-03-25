@@ -1,107 +1,134 @@
-<style>
-    /* Genel sayfa tasarımı */
-    body {
-        font-family: Arial, sans-serif;
-        background-color: #f4f4f9;
-        color: #333;
-        margin: 20px;
-        padding: 20px;
-    }
-
-    h1 {
-        text-align: center;
-        color: #2c3e50;
-    }
-
-    /* Tablo stilleri */
-    table {
-        width: 100%;
-        border-collapse: collapse;
-        background: #fff;
-        box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
-        border-radius: 8px;
-        overflow: hidden;
-    }
-
-    th, td {
-        padding: 12px;
-        text-align: left;
-        border-bottom: 1px solid #ddd;
-    }
-
-    th {
-        background: #2c3e50;
-        color: white;
-        font-weight: bold;
-    }
-
-    tr:nth-child(even) {
-        background: #f9f9f9;
-    }
-
-    /* Butonlar */
-    button {
-        background-color: #3498db;
-        color: white;
-        border: none;
-        padding: 8px 12px;
-        border-radius: 5px;
-        cursor: pointer;
-        transition: 0.3s;
-    }
-
-    button:hover {
-        background-color: #2980b9;
-    }
-
-    input[type="email"] {
-        padding: 8px;
-        border-radius: 5px;
-        border: 1px solid #ccc;
-    }
-
-    /* Mesajlaşma Paneli */
-    #chatBox {
-        width: 40%;
-        margin: auto;
-        background: white;
-        padding: 15px;
-        border-radius: 10px;
-        box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.2);
-        position: fixed;
-        top: 20%;
-        left: 50%;
-        transform: translate(-50%, -20%);
-    }
-
-    #messages {
-        height: 200px;
-        overflow-y: auto;
-        border: 1px solid #ddd;
-        padding: 10px;
-        background: #f8f8f8;
-        border-radius: 5px;
-    }
-
-    #messageInput {
-        width: calc(100% - 90px);
-        padding: 8px;
-        border: 1px solid #ccc;
-        border-radius: 5px;
-    }
-</style>
-
-
 <!DOCTYPE html>
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Paneli</title>
+    <style>
+        /* Genel sayfa tasarımı */
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f9;
+            color: #333;
+            margin: 20px;
+            padding: 20px;
+        }
+
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 20px;
+        }
+
+        /* Tablo stilleri */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: #fff;
+            box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        th {
+            background: #2c3e50;
+            color: white;
+            font-weight: bold;
+        }
+
+        tr:hover {
+            background: #f1f1f1;
+        }
+
+        tr:nth-child(even) {
+            background: #f9f9f9;
+        }
+
+        /* Butonlar */
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        button:hover {
+            background-color: #2980b9;
+        }
+
+        .secondary-button {
+            background-color: #0d3e5f;
+        }
+
+        .secondary-button:hover {
+            background-color: #0a2d44;
+        }
+
+        input[type="email"] {
+            padding: 8px;
+            border-radius: 7px;
+            border: 2px solid #ccc;
+            width: 300px;
+        }
+
+        /* Mesajlaşma Paneli */
+        #chatBox {
+            width: 40%;
+            margin: auto;
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.2);
+            position: fixed;
+            top: 20%;
+            left: 50%;
+            transform: translate(-50%, -20%);
+        }
+
+        #messages {
+            height: 200px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            padding: 10px;
+            background: #f8f8f8;
+            border-radius: 5px;
+        }
+
+        #messageInput {
+            width: calc(100% - 90px);
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        .menu-button {
+            background-color: #2980b9;
+            color: white;
+            font-size: 20px;
+            padding: 10px 15px;
+            border-radius: 4px;
+            text-decoration: none;
+            margin-bottom: 2px;
+            display: inline-block;
+        }
+
+        .menu-button:hover {
+            background-color: #1c5d85;
+        }
+
+    </style>
 </head>
 <body>
+    <a href="{% url 'projectApp:logrecords' %}" class="menu-button">📄 Log Kayıtları</a>
     <h1>Admin Paneli</h1>
-    
     <table border="1">
         <thead>
             <tr>
@@ -119,34 +146,30 @@
                 </td>
                 <td>
                     <a href="{% url 'projectApp:inspect_article' article.id %}"><button>İncele</button></a>
-
-                    <!-- Hakem yönlendirme formu -->
-                    <form method="POST" action="{% url 'projectApp:assign_referee' article.id %}" style="display:inline;">
-                        {% csrf_token %}
-                        <input type="email" name="referee_email" placeholder="Hakem E-posta" required>
-                        <button type="submit">Yönlendir</button>
-                    </form>
-
-                    <!-- Mesaj Gönder Butonu -->
                     <button onclick="openChat('{{ article.owner_email }}')">Mesaj Gönder</button>
+                    {% if article.has_final_assessment %}
+                    <a href="{% url 'projectApp:view_protected_pdf' article.id %}" target="_blank">
+                        <button class="secondary-button">Hakem Değerlendirmesi (PDF)</button>
+                    </a>
+                    {% else %}
+                    <button class="secondary-button" disabled>Hakem Değerlendirmesi Mevcut Değil</button>
+                    {% endif %}
                 </td>
             </tr>
             {% endfor %}
         </tbody>
     </table>
-
-    <!-- Mesajlaşma Paneli -->
-    <div id="chatBox" style="display: none; border: 1px solid black; padding: 10px; margin-top: 20px;">
+    
+    <div id="chatBox" style="display: none;">
         <h3>Mesajlaşma</h3>
-        <div id="messages" style="height: 200px; overflow-y: auto; border: 1px solid gray; padding: 5px;"></div>
+        <div id="messages"></div>
         <input type="text" id="messageInput" placeholder="Mesajınızı yazın">
         <button onclick="sendMessage()">Gönder</button>
         <button onclick="closeChat()">Kapat</button>
     </div>
-
     <script>
         let currentRecipient = "";
-        let currentSender = "admin"; // Eğer admin giriş yapmışsa "admin" olarak ayarlanır.
+        let currentSender = "admin";
     
         function openChat(email) {
             currentRecipient = email;
@@ -162,10 +185,7 @@
             const messageInput = document.getElementById("messageInput");
             const messageText = messageInput.value.trim();
     
-            if (!currentSender || !currentRecipient || !messageText) {
-                alert("Gönderen, alıcı ve mesaj boş olamaz!");
-                return;
-            }
+            if (!messageText) return;
     
             try {
                 const response = await fetch("/send_message/", {
@@ -178,28 +198,27 @@
                     appendMessage(currentSender, messageText);
                     messageInput.value = "";
                 } else {
-                    alert("Mesaj gönderilirken hata oluştu.");
+                    alert("Mesaj gönderilemedi.");
                 }
             } catch (error) {
-                alert("Bağlantı hatası!");
+                alert("Mesaj gönderilirken bir hata oluştu.");
             }
         }
     
         async function loadMessages() {
             try {
                 const response = await fetch(`/get_messages/?email=${currentSender}&receiver=${currentRecipient}`);
+                if (!response.ok) throw new Error("Mesajlar yüklenemedi.");
+    
                 const messages = await response.json();
                 const messagesDiv = document.getElementById("messages");
                 messagesDiv.innerHTML = "";
     
                 messages.forEach(msg => {
-                    if ((msg.sender === currentSender && msg.receiver === currentRecipient) || 
-                        (msg.sender === currentRecipient && msg.receiver === currentSender)) {
-                        appendMessage(msg.sender, msg.message);
-                    }
+                    appendMessage(msg.sender, msg.message);
                 });
             } catch (error) {
-                alert("Mesajlar yüklenirken hata oluştu.");
+                alert("Mesajlar yüklenemedi.");
             }
         }
     
@@ -209,8 +228,6 @@
             newMessage.innerHTML = `<strong>${sender}:</strong> ${message}`;
             messagesDiv.appendChild(newMessage);
         }
-    </script>
-    
-    
+    </script>    
 </body>
 </html>

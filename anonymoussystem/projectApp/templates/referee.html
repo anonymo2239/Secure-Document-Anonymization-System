@@ -4,13 +4,94 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Hakem Paneli</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f9;
+            color: #333;
+            margin: 20px;
+            padding: 20px;
+        }
+
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: #fff;
+            box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+            overflow: hidden;
+            margin-top: 20px;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        th {
+            background: #2c3e50;
+            color: white;
+            font-weight: bold;
+        }
+
+        tr:nth-child(even) {
+            background: #f9f9f9;
+        }
+
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        button:hover {
+            background-color: #2980b9;
+        }
+
+        input[type="email"] {
+            padding: 8px;
+            border-radius: 7px;
+            border: 2px solid #ccc;
+            width: 300px;
+            margin-right: 8px;
+        }
+
+        form {
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .info {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 18px;
+            color: #555;
+        }
+
+        .no-documents {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 16px;
+            color: #888;
+        }
+    </style>
 </head>
 <body>
     <h1>Hakem Paneli</h1>
 
     <form method="GET">
         <label for="email">E-posta:</label>
-        <input type="email" name="email" required>
+        <input type="email" name="email" placeholder="Hakem E-posta Adresi" required>
         <button type="submit">Giriş Yap</button>
     </form>
 
@@ -38,7 +119,7 @@
         </tbody>
     </table>
     {% else %}
-        <p>Bu e-postaya atanmış makale bulunamadı.</p>
+        <p class="no-documents">Bu e-postaya atanmış makale bulunamadı.</p>
     {% endif %}
 </body>
 </html>

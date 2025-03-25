@@ -211,9 +211,13 @@ button:hover {
 
     <!-- Sonuç gösterme alanı -->
     <div id="resultContainer" style="display:none;">
-        <p><strong>Makale Sahibi:</strong> <span id="ownerEmail"></span></p>
-        <p><strong>Makale Durumu:</strong> <span id="articleStatus"></span></p>
-        <button onclick="startChat()">Admin ile İletişime Geç</button>
+        <p>Makale Sahibi: <span id="ownerEmail"></span></p>
+        <p>Makale Durumu: <span id="articleStatus"></span></p>
+        <div id="logContainer"></div>
+        <div id="pdfContainer" style="display:none;">
+            <h3>Değerlendirme PDF:</h3>
+            <embed id="assessmentPdf" width="100%" height="500px" type="application/pdf">
+        </div>
     </div>
 
     <!-- Mesajlaşma alanı -->
@@ -230,33 +234,45 @@ button:hover {
 let trackingNo = "";
 
 async function queryArticle() {
-    trackingNo = document.getElementById("trackingInput").value.trim();
-    if (!trackingNo) {
-        alert("Lütfen takip numaranızı girin.");
-        return;
-    }
+            const trackingNo = document.getElementById("trackingInput").value.trim();
+            if (!trackingNo) {
+                alert("Lütfen takip numaranızı girin.");
+                return;
+            }
 
-    try {
-        const response = await fetch("/check_article_status/", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ tracking_no: trackingNo })
-        });
+            try {
+                const response = await fetch("/check_article_status/", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ tracking_no: trackingNo })
+                });
 
-        const result = await response.json();
+                const result = await response.json();
 
-        if (response.ok) {
-            document.getElementById("ownerEmail").textContent = result.owner_email;
-            document.getElementById("articleStatus").textContent = result.status;
-            document.getElementById("resultContainer").style.display = "block";
-            userEmail = result.owner_email;
-        } else {
-            alert(result.error);
+                if (response.ok) {
+                    document.getElementById("ownerEmail").textContent = result.owner_email;
+                    document.getElementById("articleStatus").textContent = result.status;
+                    document.getElementById("resultContainer").style.display = "block";
+
+                    let logHtml = "<h3>Log Kayıtları:</h3>";
+                    result.logs.forEach(log => {
+                        logHtml += `<p>${log}</p>`;
+                    });
+                    document.getElementById("logContainer").innerHTML = logHtml;
+
+                    if (result.has_final_assessment) {
+                        const pdfUrl = `/view_final_assessment_pdf/${trackingNo}/`;
+                        const pdfEmbed = document.getElementById("assessmentPdf");
+                        pdfEmbed.src = pdfUrl;
+                        document.getElementById("pdfContainer").style.display = "block";
+                    }
+                } else {
+                    alert(result.error);
+                }
+            } catch (error) {
+                alert("Makale sorgulama sırasında bir hata oluştu.");
+            }
         }
-    } catch (error) {
-        alert("Makale sorgulanırken hata oluştu.");
-    }
-}
 
 function startChat() {
     if (!userEmail) {

@@ -5,145 +5,352 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Makale İnceleme</title>
+    <meta name="csrf-token" content="{{ csrf_token }}">
     
     <!-- Stil Dosyaları -->
     <style>
-        /* Genel Sayfa Stili */
         body {
-            font-family: Arial, sans-serif;
-            background-color: #f4f4f9;
-            color: #333;
+            font-family: 'Arial', sans-serif;
+            background-color: #f8fafc;
+            color: #2c3e50;
             margin: 20px;
             text-align: center;
         }
 
         h1 {
-            color: #2c3e50;
+            color: #333;
             margin-bottom: 20px;
-        }
-
-        /* Buton Stilleri */
-        button {
-            background-color: #3498db;
-            color: white;
-            border: none;
-            padding: 10px 15px;
-            border-radius: 5px;
-            margin: 5px;
-            cursor: pointer;
-            transition: 0.3s;
-        }
-
-        button:hover {
-            background-color: #2980b9;
-        }
-
-        /* PDF Çerçevesi */
-        iframe {
-            width: 80%;
-            height: 800px;
-            border: 2px solid #ccc;
-            border-radius: 8px;
-            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.2);
-            margin-top: 20px;
-        }
-
-        /* Bağlantı Stili */
-        a {
-            text-decoration: none;
-            color: #3498db;
+            font-size: 32px;
             font-weight: bold;
         }
 
-        a:hover {
-            text-decoration: underline;
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
         }
 
-        /* Responsive Tasarım */
+        .flex-row {
+            display: flex;
+            justify-content: space-between;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .keywords-container {
+            flex: 1;
+            background-color: #3498db;
+            color: white;
+            padding: 15px 25px;
+            border-radius: 8px;
+            font-size: 20px;
+            font-weight: bold;
+            box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .keywords-container h2 {
+            margin: 0;
+            margin-bottom: 10px;
+            font-size: 24px;
+        }
+
+        .keywords {
+            margin: 0;
+            font-size: 20px;
+        }
+
+        .checkbox-container {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+
+        .btn-container {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            background-color: #23648f;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            font-size: 16px;
+            min-width: 200px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn:hover {
+            background-color: #2980b9;
+        }
+
+        .btn-danger {
+            background-color: #e74c3c;
+        }
+
+        .btn-danger:hover {
+            background-color: #c0392b;
+        }
+
+        .btn-secondary {
+            background-color: #2dc56d;
+        }
+
+        .btn-secondary:hover {
+            background-color: #27ae60;
+        }
+
+        select {
+            width: 100%;
+            padding: 8px;
+            margin: 10px 0;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+        }
+
+        label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        input[type="checkbox"] {
+            transform: scale(1.2);
+        }
+
+        iframe {
+            width: 100%;
+            height: 800px;
+            border: 2px solid #ccc;
+            border-radius: 8px;
+            box-shadow: 0px 6px 12px rgba(0, 0, 0, 0.2);
+            margin-top: 20px;
+        }
+
         @media (max-width: 768px) {
-            iframe {
-                width: 100%;
-                height: 600px;
+            .flex-row {
+                flex-direction: column;
             }
-            button {
-                width: 90%;
-                padding: 12px;
+            
+            .btn {
+                width: 100%;
+            }
+
+            iframe {
+                height: 600px;
             }
         }
     </style>
-
-    <!-- JavaScript -->
-    <script>
-        function loadAnonymized() {
-            let timestamp = new Date().getTime();
-            let article_id = "{{ article_id }}";
-            let pdfFrame = document.getElementById("pdf-frame");
-            fetch(`/anonymize_article/${article_id}?t=` + timestamp)
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error("PDF anonimleştirilemedi.");
-                }
-                return response.blob();
-            })
-            .then(blob => {
-                const url = window.URL.createObjectURL(blob);
-                pdfFrame.src = url;
-            })
-            .catch(error => console.error("Anonimleştirme hatası:", error));
-        }
-
-        function restoreOriginal() {
-            let timestamp = new Date().getTime();
-            let article_id = "{{ article_id }}";
-            let pdfFrame = document.getElementById("pdf-frame");
-            fetch(`/deanonymize_article/${article_id}?t=` + timestamp)
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error("PDF geri yüklenemedi.");
-                }
-                return response.blob();
-            })
-            .then(blob => {
-                const url = window.URL.createObjectURL(blob);
-                pdfFrame.src = url;
-            })
-            .catch(error => console.error("Geri yükleme hatası:", error));
-        }
-
-        function saveCurrentPdf() {
-            let article_id = "{{ article_id }}";
-            fetch(`/save_anonymized/${article_id}/`, {
-                method: "POST",
-                headers: {
-                    "X-CSRFToken": "{{ csrf_token }}",
-                    "Content-Type": "application/json"
-                }
-            })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error("Kaydetme işlemi başarısız oldu.");
-                }
-                return response.json();
-            })
-            .then(data => {
-                alert(data.message);
-            })
-            .catch(error => console.error("Kaydetme hatası:", error));
-        }
-    </script>
 </head>
 <body>
-    <h1>Makale İnceleme</h1>
-    
-    {% if pdf_url %}
-        <p><a href="{{ pdf_url }}" download="makale.pdf">📥 PDF'yi İndir</a></p>
-        <button onclick="loadAnonymized()">🔒 Anonimleştir</button>
-        <button onclick="restoreOriginal()">🛠 Orijinal Bilgileri Geri Yükle</button>
-        <button onclick="saveCurrentPdf()">💾 Anonimleştirilmiş PDF'i Kaydet</button>
+    <div class="container">
+        <h1>Makale İnceleme</h1>
+
+        <div class="flex-row">
+            <div class="keywords-container">
+                <h2>Anahtar Kelimeler</h2>
+                <p id="keywords">Yükleniyor...</p>
+            </div>
+
+            <div class="keywords-container">
+                <h2>Önerilen Hakem</h2>
+                <select id="refereeSelect">
+                    <option value="">Yükleniyor...</option>
+                </select>
+                <button onclick="assignReferee()" class="btn">İlgili Hakeme Yönlendir</button>
+            </div>
+        </div>
+
+        <div class="checkbox-container">
+            <label>
+                <input type="checkbox" id="blur_names" onclick="blurNames()"> İsimleri Gizle
+            </label>
+            <label>
+                <input type="checkbox" id="blur_emails" onclick="blurEmails()"> E-posta Adreslerini Gizle
+            </label>
+            <label>
+                <input type="checkbox" id="blur_institutions" onclick="blurInstitutions()"> Kurum Bilgilerini Gizle
+            </label>        
+        </div>
         
-        <iframe id="pdf-frame" src="{{ pdf_url }}?t={{ timestamp }}"></iframe>
-    {% else %}
-        <p>PDF yüklenemedi veya bulunamadı.</p>
-    {% endif %}
+        {% if pdf_url %}
+            <div class="btn-container">
+                <a href="{{ pdf_url }}" download="makale.pdf" class="btn btn-secondary">📥 PDF'yi İndir</a>
+                <button onclick="loadAnonymized()" class="btn">🔒 Anonimleştir</button>
+                <button onclick="restoreOriginal()" class="btn btn-secondary">🛠 Orijinal Bilgileri Geri Yükle</button>
+                <button onclick="goToAdminPage()" class="btn btn-danger">↩️ Admin Sayfasına Geri Dön</button>
+            </div>
+            <iframe id="pdf-frame" src="{% url 'projectApp:view_article_admin' id=id %}?t={{ timestamp }}"></iframe>
+
+        {% else %}
+            <p>PDF yüklenemedi veya bulunamadı.</p>
+        {% endif %}
+    </div>
 </body>
+<script defer>
+    function goToAdminPage() {
+        window.location.href = "/admin";
+    }
+
+    function toggleCheckbox(id, value) {
+        document.getElementById(id).checked = value;
+    }
+
+    function toggleAllCheckboxes(value) {
+        toggleCheckbox("blur_names", value);
+        toggleCheckbox("blur_emails", value);
+        toggleCheckbox("blur_institutions", value);
+    }
+
+    function anonymizePDF() {
+        const blurNames = document.getElementById("blur_names").checked;
+        const blurEmails = document.getElementById("blur_emails").checked;
+        const blurInstitutions = document.getElementById("blur_institutions").checked;
+
+        let id = "{{ id }}";
+        let pdfFrame = document.getElementById("pdf-frame");
+        fetch(`/anonymize_article/${id}/`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                blur_names: blurNames,
+                blur_emails: blurEmails,
+                blur_institutions: blurInstitutions
+            })
+        })
+        .then(response => response.blob())
+        .then(blob => {
+            const url = window.URL.createObjectURL(blob);
+            pdfFrame.src = url;
+        })
+        .catch(error => console.error("Anonimleştirme hatası:", error));
+    }
+
+    function blurNames() {
+        anonymizePDF();
+    }
+
+    function blurEmails() {
+        anonymizePDF();
+    }
+
+    function blurInstitutions() {
+        anonymizePDF();
+    }
+
+    function loadAnonymized() {
+        toggleAllCheckboxes(true);
+        anonymizePDF();
+    }
+
+    function restoreOriginal() {
+        toggleAllCheckboxes(false);
+        let id = "{{ id }}";
+        let pdfFrame = document.getElementById("pdf-frame");
+        fetch(`/deanonymize_article/${id}/`)
+        .then(response => response.blob())
+        .then(blob => {
+            const url = window.URL.createObjectURL(blob);
+            pdfFrame.src = url;
+        })
+        .catch(error => console.error("Geri yükleme hatası:", error));
+    }
+
+    async function loadKeywords() {
+        let id = "{{ id }}";
+        try {
+            const response = await fetch(`/keyword_analysis/${id}/`);
+            const data = await response.json();
+            if (data.keywords) {
+                document.getElementById("keywords").innerText = data.keywords.join(", ");
+                loadReferees(data.keywords);
+            } else {
+                document.getElementById("keywords").innerText = "Bulunamadı.";
+            }
+        } catch (error) {
+            console.error("Anahtar kelime yükleme hatası:", error);
+            document.getElementById("keywords").innerText = "Hata oluştu.";
+        }
+    }
+
+    async function loadReferees(keywords) {
+        try {
+            const response = await fetch(`/get_referees/`);
+            const referees = await response.json();
+            const select = document.getElementById("refereeSelect");
+            select.innerHTML = "";
+
+            let bestMatchCount = 0;
+            let bestMatchIndex = -1;
+
+            referees.forEach((referee, index) => {
+                const option = document.createElement("option");
+                option.value = referee.referee_mail;
+                option.textContent = `${referee.referee_mail} (${referee.referee_interests})`;
+
+                const interests = referee.referee_interests.toLowerCase().split(", ");
+                const matchCount = keywords.filter(keyword => interests.includes(keyword.toLowerCase())).length;
+
+                if (matchCount > bestMatchCount) {
+                    bestMatchCount = matchCount;
+                    bestMatchIndex = index;
+                }
+
+                select.appendChild(option);
+            });
+
+            if (bestMatchIndex !== -1) {
+                select.selectedIndex = bestMatchIndex;
+            }
+        } catch (error) {
+            console.error("Hakem yükleme hatası:", error);
+        }
+    }
+
+    async function assignReferee() {
+        const refereeEmail = document.getElementById("refereeSelect").value;
+        let article_id = "{{ id }}";
+
+        if (!refereeEmail) {
+            alert("Lütfen bir hakem seçin.");
+            return;
+        }
+
+        const csrftoken = document.querySelector('[name=csrf-token]').content;
+
+        try {
+            const response = await fetch(`/assign_referee/${article_id}/`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-CSRFToken": csrftoken
+                },
+                body: JSON.stringify({ referee_email: refereeEmail })
+            });
+
+            const data = await response.json();
+            alert(data.message);
+        } catch (error) {
+            console.error("Hakeme yönlendirme hatası:", error);
+        }
+    }
+
+    loadKeywords();
+</script>
+
 </html>

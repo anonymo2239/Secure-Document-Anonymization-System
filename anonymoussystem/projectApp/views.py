@@ -4,6 +4,8 @@ from django.views.decorators.csrf import csrf_exempt
 from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
 from django.core.mail import send_mail
+from django.utils import timezone
+from django.contrib import messages
 
 import os
 import struct
@@ -17,11 +19,43 @@ import spacy
 from PIL import Image, ImageFilter
 from Cryptodome.Cipher import AES
 
-from .models import UserEditor, Messages, EditorReferee  # Model bağlantıları
+from .models import UserEditor, Messages, EditorReferee, Logs, Messages, Referees  # Model bağlantıları
+
+from PyPDF2 import PdfMerger, PdfReader, PdfWriter
+from io import BytesIO
+from reportlab.pdfgen import canvas
+from reportlab.lib.pagesizes import A4
+from PIL import Image, ImageDraw, ImageFont
+import tempfile
+from nltk.corpus import stopwords
+import string
+from sklearn.feature_extraction.text import TfidfVectorizer
 
 
 def mainpage(request):
     return render(request, 'mainpage.html')
+
+def admin(request):
+    """Admin panelini aç ve makaleleri listele."""
+    articles = UserEditor.objects.all()
+
+    # Her makale için düzenlenmiş PDF olup olmadığını kontrol et
+    for article in articles:
+        # Hakem değerlendirmesi var mı kontrolü
+        referee_entry = EditorReferee.objects.filter(article_id=article.id).first()
+        if referee_entry and referee_entry.final_assessment_article:
+            article.has_final_assessment = True
+        else:
+            article.has_final_assessment = False
+
+    return render(request, 'admin.html', {"articles": articles})
+
+
+
+def logrecords(request):
+    """Log kayıtlarını listele."""
+    logs = Logs.objects.all().order_by('-log_date')  # En yeni kayıtlar en üstte
+    return render(request, 'logrecords.html', {"logs": logs})
 
 def referee(request):
     """Hakemin atanmış makalelerini listele"""
@@ -34,49 +68,51 @@ def referee(request):
 
     return render(request, "referee.html", {"documents": documents})
 
-
 def assign_referee(request, article_id):
-    """Admin tarafından hakeme makale atama işlemi."""
+    """
+    Admin tarafından hakeme makale atama işlemi.
+    """
     article = get_object_or_404(UserEditor, id=article_id)
 
     if request.method == "POST":
         referee_email = request.POST.get("referee_email")
 
         if referee_email:
-            # Hakeme makale atama işlemi
-            EditorReferee.objects.create(
-                referee_email=referee_email,
-                anonymized_article=article.raw_article,  # PDF'yi sakla
-            )
-            return redirect("projectApp:adminpage")  # Admin sayfasına geri dön
+            # Hakem atama işlemi, varsa güncelle
+            try:
+                editor_referee, created = EditorReferee.objects.update_or_create(
+                    article_id=article_id,
+                    defaults={
+                        "referee_email": referee_email,
+                        "anonymized_article": article.raw_article,
+                    }
+                )
+                if created:
+                    messages.success(request, f"Makale başarıyla {referee_email} hakemine yönlendirildi!")
+                else:
+                    messages.warning(request, f"Makale zaten atanmıştı, güncellendi!")
+                return redirect("projectApp:adminpage")
+            except Exception as e:
+                messages.error(request, f"Hakem atama işleminde hata: {str(e)}")
+                return redirect("projectApp:adminpage")
 
     return JsonResponse({"error": "E-posta girilmedi."}, status=400)
 
 
 def refereeassessment(request, article_id):
-    """Hakemin değerlendirme yazacağı sayfa"""
-    article = get_object_or_404(EditorReferee, id=article_id)  # EditorReferee tablosundan al
+    """
+    Hakemin değerlendirme yazacağı sayfa
+    """
+    article = get_object_or_404(EditorReferee, id=article_id)
 
     if request.method == "POST":
-        assessment_text = request.POST.get("assessment", "").strip().encode("utf-8")
         explanation_text = request.POST.get("explanation", "").strip()
-        final_assessment_text = request.POST.get("final_assessment_article", "").strip().encode("utf-8")  # Formdaki isimle eşleşmeli!
-
-        # Değerleri uygun formatta kaydet
-        article.assessment = assessment_text if assessment_text else None
-        article.explanation = explanation_text if explanation_text else None
-        article.final_assessment_article = final_assessment_text if final_assessment_text else None
-
-        article.save()
-        return redirect("projectApp:referee")  # Değerlendirme tamamlandığında yönlendir
+        if explanation_text:
+            article.explanation = explanation_text
+            article.save()
+        return redirect("projectApp:referee")
 
     return render(request, "refereeassessment.html", {"article": article})
-
-def admin(request):
-    """Admin panelini aç ve makaleleri listele."""
-    articles = UserEditor.objects.all()
-    return render(request, 'admin.html', {"articles": articles})
-
 
 
 def generate_tracking_number():
@@ -91,8 +127,6 @@ def generate_tracking_number():
     # 7 basamaklı bir takip numarası elde etmek için mod işlemi
     return str(numeric_value % 9000000 + 1000000)  # 1000000-9999999 arası sayı üret
 
-
-
 @csrf_exempt
 def uploadarticle(request):
     """Makale yükleme işlemi: PDF dosyasını kaydeder, AES ile takip numarası üretir ve e-posta gönderir."""
@@ -104,18 +138,12 @@ def uploadarticle(request):
         email = request.POST.get("email")  # Kullanıcının e-posta adresini al
         pdf_file = request.FILES.get("file")  # Kullanıcının yüklediği PDF dosyasını al
 
-        # Gerekli alanlar boş mu?
         if not email or not pdf_file:
             return JsonResponse({"error": "Lütfen e-posta adresinizi girin ve bir PDF yükleyin."}, status=400)
-
-        # AES ile benzersiz takip numarası oluştur
         tracking_number = generate_tracking_number()
-
-        # PDF dosyasını binary olarak oku
         pdf_binary_data = pdf_file.read()
 
         try:
-            # Veritabanına kaydet
             user_article = UserEditor(
                 tracking_no=tracking_number,
                 owner_email=email,
@@ -123,7 +151,10 @@ def uploadarticle(request):
             )
             user_article.save()
 
-            # Kullanıcıya takip numarasını içeren e-posta gönder
+            log_message = f"{email} kullanıcısının makalesi {timezone.now().strftime('%d-%m-%Y %H:%M:%S')} tarihinde editöre ulaştı."
+            log = Logs(log_date=timezone.now(), log_details=log_message)
+            log.save()
+
             send_mail(
                 "Makale Takip Numaranız",
                 f"Merhaba,\n\nMakaleniz başarıyla sisteme yüklendi.\nTakip numaranız: {tracking_number}\n\nBu numarayı kullanarak makalenizin durumunu sorgulayabilirsiniz.",
@@ -131,7 +162,6 @@ def uploadarticle(request):
                 [email],
                 fail_silently=False,
             )
-
 
             return JsonResponse({
                 "success": "Makale başarıyla yüklendi.",
@@ -192,7 +222,6 @@ def get_referee_documents(request):
 
 @csrf_exempt
 def check_article_status(request):
-    """Takip numarasına göre makalenin durumunu sorgular."""
     if request.method == "POST":
         data = json.loads(request.body)
         tracking_no = data.get("tracking_no")
@@ -202,10 +231,18 @@ def check_article_status(request):
 
         try:
             article = UserEditor.objects.get(tracking_no=tracking_no)
+            logs = Logs.objects.filter(log_details__icontains=article.owner_email)
+            log_list = [log.log_details for log in logs]
+
+            referee_entry = EditorReferee.objects.filter(article_id=article.id).first()
+            has_final_assessment = bool(referee_entry and referee_entry.final_assessment_article)
+
             return JsonResponse({
                 "tracking_no": article.tracking_no,
                 "owner_email": article.owner_email,
-                "status": "İnceleniyor"  # İlerleyen süreçlerde durumu güncelleyebilirsin.
+                "status": "İnceleniyor",
+                "logs": log_list,
+                "has_final_assessment": has_final_assessment
             })
         except UserEditor.DoesNotExist:
             return JsonResponse({"error": "Geçersiz takip numarası."}, status=404)
@@ -217,8 +254,181 @@ def queryarticle(request):
     return render(request, 'queryarticle.html')
 
 
+def view_article_pdf(request, article_id):
+    article = get_object_or_404(EditorReferee, article_id=article_id)
+    # has_final_assessment değerini burada belirliyoruz
+    article.has_final_assessment = bool(article.final_assessment_article)
+
+    if article.anonymized_article:
+        return HttpResponse(article.anonymized_article, content_type="application/pdf", headers={
+            "Content-Disposition": 'inline; filename="makale.pdf"'
+        })
+    return JsonResponse({"error": "PDF bulunamadı."}, status=404)
+
+def view_final_assessment_pdf(request, tracking_no):
+    try:
+        # Öncelikle UserEditor tablosundan makaleyi bul
+        user_article = UserEditor.objects.get(tracking_no=tracking_no)
+        # Daha sonra EditorReferee tablosunda makalenin final değerlendirme PDF'sini bul
+        article = EditorReferee.objects.get(article_id=user_article.id)
+        if article.final_assessment_article:
+            return HttpResponse(article.final_assessment_article, content_type="application/pdf")
+        else:
+            return HttpResponse("Final değerlendirme PDF'si bulunamadı.", status=404)
+    except UserEditor.DoesNotExist:
+        return HttpResponse("Makale bulunamadı.", status=404)
+    except EditorReferee.DoesNotExist:
+        return HttpResponse("Final değerlendirme PDF'si bulunamadı.", status=404)
+
+
+
+def view_article_admin(request, id):
+    article = get_object_or_404(UserEditor, id=id)
+    if article.raw_article:
+        return HttpResponse(article.raw_article, content_type="application/pdf", headers={
+            "Content-Disposition": 'inline; filename="raw_makale.pdf"'
+        })
+    return JsonResponse({"error": "Makale bulunamadı."}, status=404)
+
+
+def merge_and_protect_pdf(original_pdf_bytes, explanation_text):
+    """
+    PDF'yi bellek üzerinde birleştirir ve düzenlenemez hale getirir.
+    """
+    try:
+        # PDF Birleştirme
+        merger = PdfMerger()
+        original_pdf = BytesIO(original_pdf_bytes)
+        merger.append(original_pdf)
+
+        # Değerlendirme PDF'si oluşturma
+        assessment_pdf = BytesIO()
+        c = canvas.Canvas(assessment_pdf, pagesize=A4)
+        c.setFont("Times-Roman", 12)
+        c.drawString(50, 800, "Hakem Değerlendirme:")
+        c.drawString(50, 780, explanation_text)
+        c.showPage()
+        c.save()
+        assessment_pdf.seek(0)
+
+        # PDF'yi birleştirme
+        merged_pdf = BytesIO()
+        merger.append(assessment_pdf)
+        merger.write(merged_pdf)
+        merger.close()
+        merged_pdf.seek(0)
+
+        # Düzenlenemez PDF oluşturma
+        protected_pdf = BytesIO()
+        pdf_writer = PdfWriter()
+
+        reader = PdfReader(merged_pdf)
+        for page in reader.pages:
+            pdf_writer.add_page(page)
+
+        # PDF'yi şifrele
+        pdf_writer.encrypt(user_password="", owner_password="ownerpassword", use_128bit=True)
+        pdf_writer.write(protected_pdf)
+        protected_pdf.seek(0)
+
+        # PDF'nin binary olarak çıktısını verelim
+        final_pdf = protected_pdf.getvalue()
+        print(f"[DEBUG] PDF Boyutu: {len(final_pdf)} bayt")
+        print(f"[DEBUG] PDF Veri Tipi: {type(final_pdf)}")
+        
+        return merged_pdf.getvalue(), final_pdf
+
+    except Exception as e:
+        print(f"[ERROR] PDF oluşturulurken hata: {str(e)}")
+        return None, None
+
+
+def save_to_database(request, article_id):
+    """
+    Birleştirilmiş ve şifrelenmiş PDF'yi veritabanına kaydeder.
+    """
+    if request.method == 'POST':
+        explanation_text = request.POST.get('explanation', '')
+
+        # Veritabanından orijinal makale PDF'sini alırken article_id'yi kullanıyoruz
+        try:
+            referee_article = get_object_or_404(EditorReferee, article_id=article_id)
+            user_article = get_object_or_404(UserEditor, id=article_id)
+        except Exception as e:
+            print(f"[ERROR] Makale bulunamadı: {str(e)}")
+            return JsonResponse({"error": f"Makale bulunamadı: {str(e)}"}, status=404)
+
+        # Makale sahibinin e-posta adresini al
+        article_owner_email = user_article.owner_email
+
+        original_pdf_bytes = user_article.raw_article  # Orijinal (anonimleştirilmemiş) PDF
+        anonymized_pdf_bytes = referee_article.anonymized_article  # Anonimleştirilmiş PDF
+
+        # PDF oluşturma ve şifreleme (orijinal ve değerlendirme birleştirilmiş PDF)
+        merged_pdf, final_assessment_pdf = merge_and_protect_pdf(original_pdf_bytes, explanation_text)
+
+        # Veriyi kaydet
+        if final_assessment_pdf:
+            referee_article.final_assessment_article = final_assessment_pdf
+            referee_article.explanation = explanation_text
+            referee_article.save()
+            print(f"[SUCCESS] Veritabanına başarıyla kaydedildi. ID: {article_id}")
+
+            # Log kaydı oluştur
+            log_message = f"Hakem, {article_owner_email} kullanıcısının makalesine {timezone.now().strftime('%d-%m-%Y %H:%M:%S')} tarihinde cevap verdi."
+            try:
+                log = Logs(log_date=timezone.now(), log_details=log_message)
+                log.save()
+            except Exception as e:
+                print(f"[ERROR] Log kaydı yapılamadı: {str(e)}")
+
+        return redirect(f'/refereeassessment/{article_id}/')
+
+    return JsonResponse({"error": "Geçersiz istek yöntemi."}, status=400)
+
+
+
+def view_encrypted_pdf(request, article_id):
+    """
+    Şifrelenmiş PDF'yi yeni sekmede görüntüleme fonksiyonu.
+    """
+    try:
+        article = get_object_or_404(EditorReferee, id=article_id)
+        if article.final_assessment_article:
+            response = HttpResponse(article.final_assessment_article, content_type="application/pdf")
+            response['Content-Disposition'] = 'inline; filename="sifrelenmis_makale.pdf"'
+            return response
+        return JsonResponse({"error": "Şifrelenmiş PDF bulunamadı."}, status=404)
+    except EditorReferee.DoesNotExist:
+        return JsonResponse({"error": "Makale bulunamadı."}, status=404)
+
+
+def view_protected_pdf(request, id):
+    article = get_object_or_404(EditorReferee, id=id)
+    # has_final_assessment alanını burada belirliyoruz
+    article.has_final_assessment = bool(article.final_assessment_article)
+    
+    if article.has_final_assessment:
+        return HttpResponse(article.final_assessment_article, content_type="application/pdf", headers={
+            "Content-Disposition": 'inline; filename="duzenlenmis_makale.pdf"'
+        })
+    return HttpResponse("Düzenlenmiş PDF bulunamadı.", status=404)
+
+
+
 
 # alperenin fonklar
+
+def get_referees(request):
+    try:
+        referees = Referees.objects.all()
+        referees_list = [
+            {"referee_mail": referee.referee_mail, "referee_interests": referee.referee_interests}
+            for referee in referees
+        ]
+        return JsonResponse(referees_list, safe=False)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
 
 def extract_author_info(text):
     """
@@ -243,9 +453,10 @@ def extract_author_info(text):
     
     return set(author_names), set(emails), set(institutions)
 
-def anonymize_pdf(article):
+
+def anonymize_pdf(article, blur_names=False, blur_emails=False, blur_institutions=False):
     """
-    PDF'den metni çıkar, sadece yazar isimlerini ve kurum bilgilerini sansürler ve yeni anonimleştirilmiş PDF oluşturur.
+    PDF'den metni çıkar, sadece yazar isimlerini, e-posta adreslerini ve kurum bilgilerini sansürler.
     """
     doc = fitz.open(stream=article.raw_article, filetype="pdf")
     total_pages = len(doc)
@@ -261,29 +472,32 @@ def anonymize_pdf(article):
                              "Takahashi", "Grandjean", "Nath"}
     author_names.update(manual_names_to_blur)
     
+    words_to_blur = set()
+    if blur_names:
+        words_to_blur.update(author_names)
+    if blur_emails:
+        words_to_blur.update(emails)
+    if blur_institutions:
+        words_to_blur.update(institutions)
+
     # Sansürlenmemesi gereken başlıklar
     exclude_titles = [
         "Emotion Recognition Using Temporally Localized Emotional Events in EEG With Naturalistic Context: DENS# Dataset",
         "EEG signal processing and emotion recognition using Convolutional Neural Network",
         "An Efficient Approach to EEG-Based Emotion Recognition using LSTM Network"
     ]
-    
+
     for page_num in target_pages:
         page = doc[page_num]
         page_text = page.get_text("text")
-        page_lines = page_text.lower().split("\n")  # Tüm satırları al
-        
-        # Sayfadaki metnin herhangi bir yerinde başlıklar var mı kontrol et
-        if any(title.lower() in page_text.lower() for title in exclude_titles):
-            continue  
 
-        # Sansürlenecek kelimeler
-        words_to_blur = set(author_names) | set(emails) | set(institutions)
+        # Başlık kontrolü
+        if any(title.lower() in page_text.lower() for title in exclude_titles):
+            continue
 
         for word in words_to_blur:
             if any(word.lower() in title.lower() for title in exclude_titles):
                 continue  # Eğer kelime başlığın içinde geçiyorsa sansürleme
-            
             text_instances = page.search_for(word)
             blurred_text = " " * len(word)
             for inst in text_instances:
@@ -296,46 +510,37 @@ def anonymize_pdf(article):
     pdf_bytes.seek(0)
     return pdf_bytes.read()
 
-
-def anonymize_article(request, article_id):
+@csrf_exempt
+def anonymize_article(request, id):
     """
     Makale PDF'yi anonimleştirir, anonimleştirilmiş sürümü döndürür.
     """
-    article = get_object_or_404(UserEditor, id=article_id)
-    
-    if not article.raw_article:
-        return JsonResponse({"error": "Orijinal PDF bulunamadı."}, status=404)
-    
-    anonymized_pdf = anonymize_pdf(article)
-    
-    return HttpResponse(anonymized_pdf, content_type="application/pdf", headers={
-        "Content-Disposition": 'inline; filename="anonim_makale.pdf"'
-    })
+    article = get_object_or_404(UserEditor, id=id)
 
-def save_anonymized_article(request, article_id):
-    """
-    Anonimleştirilmiş PDF'yi veritabanına kaydeder.
-    """
-    article = get_object_or_404(UserEditor, id=article_id)
-    
-    if not article.raw_article:
-        return JsonResponse({"error": "Orijinal PDF bulunamadı."}, status=404)
-    
-    anonymized_pdf = anonymize_pdf(article)
-    
-    editor_referee = EditorReferee.objects.create(
-        referee_email=article.referee_email if article.referee_email else "example@domain.com",
-        anonymized_article=anonymized_pdf
-    )
-    editor_referee.save()
-    
-    return JsonResponse({"message": "Anonimleştirilmiş PDF başarıyla kaydedildi."})
+    try:
+        data = json.loads(request.body)
+        print("Sunucuya Gelen Veriler:", data)  # VERİLERİ LOG YAZDIRMA
 
-def deanonymize_article(request, article_id):
+        blur_names = data.get("blur_names", False)
+        blur_emails = data.get("blur_emails", False)
+        blur_institutions = data.get("blur_institutions", False)
+
+        print(f"İsimleri Gizle: {blur_names}, E-posta Gizle: {blur_emails}, Kurum Gizle: {blur_institutions}")
+
+        anonymized_pdf = anonymize_pdf(article, blur_names, blur_emails, blur_institutions)
+
+        return HttpResponse(anonymized_pdf, content_type="application/pdf", headers={
+            "Content-Disposition": 'inline; filename="anonim_makale.pdf"'
+        })
+    except Exception as e:
+        print("Anonimleştirme Hatası:", str(e))  # Hataları da logla
+        return JsonResponse({"error": str(e)}, status=500)
+
+def deanonymize_article(request, id):
     """
     Orijinal PDF'yi döndürür.
     """
-    article = get_object_or_404(UserEditor, id=article_id)
+    article = get_object_or_404(UserEditor, id=id)
     
     if not article.raw_article:
         return JsonResponse({"error": "Orijinal PDF bulunamadı."}, status=404)
@@ -345,17 +550,111 @@ def deanonymize_article(request, article_id):
     })
 
 
+stop_words = set(stopwords.words('english'))
 
-def inspect_article(request, article_id):
+def extract_keywords(text):
+    # Metni küçük harfe dönüştür
+    text = text.lower()
+    # Noktalama işaretlerini kaldır
+    text = text.translate(str.maketrans('', '', string.punctuation))
+    # Kelimeleri ayır
+    words = text.split()
+    # Anlamsız kelimeleri çıkar
+    filtered_words = [word for word in words if word not in stop_words]
+    cleaned_text = ' '.join(filtered_words)
+
+    # TF-IDF kullanarak anlamlı kelime öbeklerini bul
+    vectorizer = TfidfVectorizer(ngram_range=(1, 3), stop_words='english')
+    tfidf_matrix = vectorizer.fit_transform([cleaned_text])
+    feature_names = vectorizer.get_feature_names_out()
+    tfidf_scores = tfidf_matrix.toarray()[0]
+
+    # Skorları eşleştir ve en yüksek skorluları bul
+    scored_keywords = list(zip(feature_names, tfidf_scores))
+    sorted_keywords = sorted(scored_keywords, key=lambda x: x[1], reverse=True)
+    top_keywords = [keyword for keyword, score in sorted_keywords[:6]]
+
+    return top_keywords
+
+
+def analyze_pdf_keywords(article):
+    doc = fitz.open(stream=article.raw_article, filetype="pdf")
+    total_pages = len(doc)
+    target_pages = list(range(1)) + list(range(total_pages - 2, total_pages))
+    text = "".join([doc[page].get_text("text") for page in target_pages])
+    keywords = extract_keywords(text)
+    return keywords
+
+
+def keyword_analysis(request, id):
+    article = get_object_or_404(UserEditor, id=id)
+    try:
+        keywords = analyze_pdf_keywords(article)
+
+        # Hakem önerisi bulma
+        referees = Referees.objects.all()
+        best_match = None
+        best_score = 0
+        matched_referees = []
+
+        for referee in referees:
+            interests = set(referee.referee_interests.lower().split(", "))
+            match_count = len(set(keywords).intersection(interests))
+            matched_referees.append((referee, match_count))
+
+        # Skorlara göre sırala (büyükten küçüğe)
+        matched_referees.sort(key=lambda x: x[1], reverse=True)
+
+        # JSON yanıtı oluştur
+        referee_list = [{"referee_mail": ref[0].referee_mail, "referee_interests": ref[0].referee_interests} for ref in matched_referees]
+
+        return JsonResponse({"keywords": keywords, "referees": referee_list})
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
+
+def assign_referee(request, article_id):
+    """
+    Admin tarafından hakeme makale atama işlemi.
+    """
+    # Orijinal makaleyi UserEditor tablosundan al
     article = get_object_or_404(UserEditor, id=article_id)
+    data = json.loads(request.body)
+    referee_email = data.get("referee_email")
+
+    # Makale sahibinin e-posta adresini al
+    article_owner = article.owner_email
+
+    # Makalenin daha önce yönlendirilip yönlendirilmediğini kontrol et
+    existing_assignment = EditorReferee.objects.filter(article_id=article_id).first()
+    if existing_assignment:
+        return JsonResponse({"message": "Bu makale zaten bir hakeme yönlendirilmiştir."})
+
+    # PDF'yi anonimleştir (blurlama işlemi)
+    anonymized_pdf = anonymize_pdf(article, blur_names=True, blur_emails=True, blur_institutions=True)
+
+    # Anonimleştirilmiş PDF'yi EditorReferee tablosuna kaydet
+    try:
+        editor_referee = EditorReferee.objects.create(
+            article_id=article_id,
+            anonymized_article=anonymized_pdf,
+            referee_email=referee_email
+        )
+        editor_referee.save()
+    except Exception as e:
+        return JsonResponse({"message": f"Hakeme yönlendirme başarısız: {str(e)}"})
+
+    # Log kaydı oluştur
+    log_message = f"{article_owner} kullanıcısının makalesi {timezone.now().strftime('%d-%m-%Y %H:%M:%S')} tarihinde hakeme iletildi."
+    try:
+        log = Logs(log_date=timezone.now(), log_details=log_message)
+        log.save()
+    except Exception as e:
+        return JsonResponse({"message": f"Log kaydı başarısız: {str(e)}"})
+
+    return JsonResponse({"message": "Hakeme yönlendirme başarıyla yapıldı."})
+
+def inspect_article(request, id):
+    # Orijinal makaleyi UserEditor tablosundan al
+    article = get_object_or_404(UserEditor, id=id)
     pdf_url = f"/view_article/{article.id}/"
-    return render(request, "inspectarticle.html", {"pdf_url": pdf_url, "article_id": article_id})
-
-def view_article_pdf(request, article_id):
-    article = get_object_or_404(UserEditor, id=article_id)
-    if article.raw_article:
-        return HttpResponse(article.raw_article, content_type="application/pdf", headers={
-            "Content-Disposition": 'inline; filename="makale.pdf"'
-        })
-    return JsonResponse({"error": "PDF bulunamadı."}, status=404)
-
+    return render(request, "inspectarticle.html", {"pdf_url": pdf_url, "id": id})
