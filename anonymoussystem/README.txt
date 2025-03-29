@@ -17,3 +17,6 @@ DATABASES = {
 * python manage.py makemigrations
 * python manage.py migrate
 * models.py dosyasını UTF-8 formatında kaydet
+
+Ornek Degerlendirme:
+EEG tabanli duygusal tanima icin yenilikci bir veri seti sunuyor. Yontem saglam ancak veri toplama sureci ve model detaylari yetersiz. Genellestirme calismalari ile katki artirilabilir.

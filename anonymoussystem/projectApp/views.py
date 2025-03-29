@@ -14,14 +14,15 @@ from fpdf import FPDF
 import os
 import struct
 import json
-import base64
 import re
 import io
 
 import fitz  # PyMuPDF
 import spacy
-from PIL import Image, ImageFilter
+from PIL import Image
 from Cryptodome.Cipher import AES
+from Cryptodome.Random import get_random_bytes
+import base64
 
 from .models import UserEditor, Messages, EditorReferee, Logs, Messages, Referees  # Model bağlantıları
 
@@ -35,6 +36,22 @@ from nltk.corpus import stopwords
 import string
 from sklearn.feature_extraction.text import TfidfVectorizer
 
+AES_KEY = b'S3cr3tAESKey1234'
+
+def encrypt_binary_data(data, key):
+    """AES ile binary veriyi şifreler."""
+    cipher = AES.new(key, AES.MODE_EAX)
+    ciphertext, tag = cipher.encrypt_and_digest(data)
+    return base64.b64encode(cipher.nonce + tag + ciphertext)
+
+def decrypt_binary_data(data, key):
+    """AES ile binary veriyi çözer."""
+    data = base64.b64decode(data)
+    nonce = data[:16]
+    tag = data[16:32]
+    ciphertext = data[32:]
+    cipher = AES.new(key, AES.MODE_EAX, nonce=nonce)
+    return cipher.decrypt_and_verify(ciphertext, tag)
 
 def mainpage(request):
     return render(request, 'mainpage.html')
@@ -76,31 +93,46 @@ def assign_referee(request, article_id):
     """
     Admin tarafından hakeme makale atama işlemi.
     """
+    # Orijinal makaleyi UserEditor tablosundan al
     article = get_object_or_404(UserEditor, id=article_id)
+    data = json.loads(request.body)
+    referee_email = data.get("referee_email")
 
-    if request.method == "POST":
-        referee_email = request.POST.get("referee_email")
+    # Makale sahibinin e-posta adresini al
+    article_owner = article.owner_email
 
-        if referee_email:
-            # Hakem atama işlemi, varsa güncelle
-            try:
-                editor_referee, created = EditorReferee.objects.update_or_create(
-                    article_id=article_id,
-                    defaults={
-                        "referee_email": referee_email,
-                        "anonymized_article": article.raw_article,
-                    }
-                )
-                if created:
-                    messages.success(request, f"Makale başarıyla {referee_email} hakemine yönlendirildi!")
-                else:
-                    messages.warning(request, f"Makale zaten atanmıştı, güncellendi!")
-                return redirect("projectApp:adminpage")
-            except Exception as e:
-                messages.error(request, f"Hakem atama işleminde hata: {str(e)}")
-                return redirect("projectApp:adminpage")
+    # Makalenin daha önce yönlendirilip yönlendirilmediğini kontrol et
+    existing_assignment = EditorReferee.objects.filter(article_id=article_id).first()
+    if existing_assignment:
+        return JsonResponse({"message": "Bu makale zaten bir hakeme yönlendirilmiştir."})
 
-    return JsonResponse({"error": "E-posta girilmedi."}, status=400)
+    # PDF'yi anonimleştir (blurlama işlemi)
+    anonymized_pdf = anonymize_pdf(article, blur_names=True, blur_emails=True, blur_institutions=True)
+
+    # Anonimleştirilmiş PDF'i AES ile şifrele
+    encrypted_pdf = encrypt_binary_data(anonymized_pdf, AES_KEY)
+
+    # Anonimleştirilmiş ve şifrelenmiş PDF'yi EditorReferee tablosuna kaydet
+    try:
+        editor_referee = EditorReferee.objects.create(
+            article_id=article_id,
+            anonymized_article=encrypted_pdf,
+            referee_email=referee_email
+        )
+        editor_referee.save()
+    except Exception as e:
+        return JsonResponse({"message": f"Hakeme yönlendirme başarısız: {str(e)}"})
+
+    # Log kaydı oluştur
+    log_message = f"{article_owner} kullanıcısının makalesi {timezone.now().strftime('%d-%m-%Y %H:%M:%S')} tarihinde hakeme iletildi."
+    try:
+        log = Logs(log_date=timezone.now(), log_details=log_message)
+        log.save()
+    except Exception as e:
+        return JsonResponse({"message": f"Log kaydı başarısız: {str(e)}"})
+
+    return JsonResponse({"message": "Hakeme yönlendirme başarıyla yapıldı."})
+
 
 
 def refereeassessment(request, article_id):
@@ -298,6 +330,7 @@ def view_article_admin(request, id):
 def merge_and_protect_pdf(original_pdf_bytes, explanation_text):
     """
     PDF'yi bellek üzerinde birleştirir ve düzenlenemez hale getirir.
+    Hakem değerlendirmesini görüntü olarak PDF'e ekler.
     """
     try:
         # PDF Birleştirme
@@ -305,21 +338,35 @@ def merge_and_protect_pdf(original_pdf_bytes, explanation_text):
         original_pdf = BytesIO(original_pdf_bytes)
         merger.append(original_pdf)
 
-        # Değerlendirme PDF'si oluşturma
-        assessment_pdf = BytesIO()
-        c = canvas.Canvas(assessment_pdf, pagesize=A4)
-        c.setFont("Times-Roman", 12)
-        c.drawString(50, 800, "Hakem Değerlendirme:")
-        c.drawString(50, 780, explanation_text)
-        c.showPage()
-        c.save()
-        assessment_pdf.seek(0)
+        # Değerlendirme Metnini Görüntüye Dönüştürme
+        img = Image.new('RGB', (595, 842), color=(255, 255, 255))  # A4 boyutunda beyaz sayfa
+        draw = ImageDraw.Draw(img)
+        font_path = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
+        try:
+            font = ImageFont.truetype(font_path, 20)
+        except IOError:
+            font = ImageFont.load_default()
+
+        # Metni satırlara böl ve ekle
+        y_position = 50
+        max_line_length = 80
+        lines = [explanation_text[i:i + max_line_length] for i in range(0, len(explanation_text), max_line_length)]
+        for line in lines:
+            draw.text((50, y_position), line, font=font, fill=(0, 0, 0))
+            y_position += 30
+
+        # Görüntüyü PDF'e dönüştür
+        image_pdf = BytesIO()
+        img.save(image_pdf, format="PDF")
+        image_pdf.seek(0)
 
         # PDF'yi birleştirme
         merged_pdf = BytesIO()
-        merger.append(assessment_pdf)
-        merger.write(merged_pdf)
-        merger.close()
+        final_merger = PdfMerger()
+        final_merger.append(original_pdf)  # Orijinal PDF'i birleştir
+        final_merger.append(image_pdf)    # Görüntü PDF'ini birleştir
+        final_merger.write(merged_pdf)
+        final_merger.close()
         merged_pdf.seek(0)
 
         # Düzenlenemez PDF oluşturma
@@ -330,17 +377,13 @@ def merge_and_protect_pdf(original_pdf_bytes, explanation_text):
         for page in reader.pages:
             pdf_writer.add_page(page)
 
-        # PDF'yi şifrele
+        # PDF'nin düzenlenemez hale getirilmesi
         pdf_writer.encrypt(user_password="", owner_password="ownerpassword", use_128bit=True)
+
         pdf_writer.write(protected_pdf)
         protected_pdf.seek(0)
 
-        # PDF'nin binary olarak çıktısını verelim
-        final_pdf = protected_pdf.getvalue()
-        print(f"[DEBUG] PDF Boyutu: {len(final_pdf)} bayt")
-        print(f"[DEBUG] PDF Veri Tipi: {type(final_pdf)}")
-        
-        return merged_pdf.getvalue(), final_pdf
+        return merged_pdf.getvalue(), protected_pdf.getvalue()
 
     except Exception as e:
         print(f"[ERROR] PDF oluşturulurken hata: {str(e)}")
@@ -399,12 +442,17 @@ def view_encrypted_pdf(request, article_id):
     try:
         article = get_object_or_404(EditorReferee, id=article_id)
         if article.final_assessment_article:
-            response = HttpResponse(article.final_assessment_article, content_type="application/pdf")
+            # Şifrelenmiş veriyi çöz
+            decrypted_pdf = decrypt_binary_data(article.final_assessment_article, AES_KEY)
+            response = HttpResponse(decrypted_pdf, content_type="application/pdf")
             response['Content-Disposition'] = 'inline; filename="sifrelenmis_makale.pdf"'
             return response
         return JsonResponse({"error": "Şifrelenmiş PDF bulunamadı."}, status=404)
     except EditorReferee.DoesNotExist:
         return JsonResponse({"error": "Makale bulunamadı."}, status=404)
+    except Exception as e:
+        return JsonResponse({"error": f"Çözme işlemi başarısız: {str(e)}"}, status=500)
+
 
 
 def view_protected_pdf(request, id):

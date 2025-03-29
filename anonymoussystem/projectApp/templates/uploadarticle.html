@@ -37,7 +37,7 @@
 
         /* E-Posta Giriş Alanı */
         input[type="email"] {
-            width: 20%;
+            width: 24%;
             padding: 10px;
             font-size: 16px;
             border: 2px solid white;
@@ -72,8 +72,26 @@
             background: rgba(255, 255, 255, 0.15);
         }
 
-        .upload-container:hover {
-            border-color: #f1c40f;
+        /* PDF Yüklendiğinde */
+        .upload-container.uploaded {
+            background: rgba(46, 204, 113, 0.8);
+            color: white;
+            border: 3px solid #2ecc71;
+            transition: 0.3s;
+        }
+
+        .upload-container.uploaded p {
+            font-size: 18px;
+            font-weight: bold;
+            color: white;
+        }
+
+        .upload-container.uploaded::after {
+            content: "✔ PDF Yüklendi!";
+            font-size: 20px;
+            color: white;
+            display: block;
+            margin-top: 10px;
         }
 
         /* Buton Stili */
@@ -168,68 +186,71 @@
         <button type="submit">Makale Gönder</button>
     </form>
     
-    <button class="right-bottom">Makale Sorgula</button>
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const uploadBox = document.getElementById("upload-box");
+        const fileInput = document.getElementById("fileInput");
+        const uploadForm = document.getElementById("uploadForm");
+        const emailInput = document.getElementById("emailInput");
 
-    <script>
-        document.addEventListener("DOMContentLoaded", function () {
-            const uploadBox = document.getElementById("upload-box");
-            const fileInput = document.getElementById("fileInput");
-            const uploadForm = document.getElementById("uploadForm");
-            const emailInput = document.getElementById("emailInput");
+        uploadBox.addEventListener("click", () => fileInput.click());
 
-            uploadBox.addEventListener("click", () => fileInput.click());
-
-            uploadBox.addEventListener("dragover", (event) => {
-                event.preventDefault();
-                uploadBox.classList.add("dragover");
-            });
-
-            uploadBox.addEventListener("dragleave", () => uploadBox.classList.remove("dragover"));
-
-            uploadBox.addEventListener("drop", (event) => {
-                event.preventDefault();
-                uploadBox.classList.remove("dragover");
-                const files = event.dataTransfer.files;
-                if (files.length > 0 && files[0].type === "application/pdf") {
-                    fileInput.files = files;
-                } else {
-                    alert("Lütfen sadece PDF dosyası yükleyin.");
-                }
-            });
-
-            uploadForm.addEventListener("submit", async (event) => {
-                event.preventDefault();
-
-                const formData = new FormData();
-                formData.append("email", emailInput.value);
-                formData.append("file", fileInput.files[0]);
-
-                if (!emailInput.value) {
-                    alert("Lütfen e-posta adresinizi girin.");
-                    return;
-                }
-                if (!fileInput.files.length) {
-                    alert("Lütfen bir PDF dosyası seçin.");
-                    return;
-                }
-
-                try {
-                    const response = await fetch("/uploadarticle/", {
-                        method: "POST",
-                        body: formData
-                    });
-
-                    const result = await response.json();
-                    if (response.ok) {
-                        alert(`Başarılı! Takip numaranız: ${result.tracking_no}`);
-                    } else {
-                        alert(`Hata: ${result.error}`);
-                    }
-                } catch (error) {
-                    alert("Sunucu hatası! Lütfen tekrar deneyin.");
-                }
-            });
+        uploadBox.addEventListener("dragover", (event) => {
+            event.preventDefault();
+            uploadBox.classList.add("dragover");
         });
-    </script>
+
+        uploadBox.addEventListener("dragleave", () => uploadBox.classList.remove("dragover"));
+
+        uploadBox.addEventListener("drop", (event) => {
+            event.preventDefault();
+            uploadBox.classList.remove("dragover");
+            const files = event.dataTransfer.files;
+            if (files.length > 0 && files[0].type === "application/pdf") {
+                fileInput.files = files;
+                uploadBox.classList.add("uploaded");
+            } else {
+                alert("Lütfen sadece PDF dosyası yükleyin.");
+            }
+        });
+
+        fileInput.addEventListener("change", () => {
+            if (fileInput.files.length > 0 && fileInput.files[0].type === "application/pdf") {
+                uploadBox.classList.add("uploaded");
+            } else {
+                uploadBox.classList.remove("uploaded");
+            }
+        });
+
+        uploadForm.addEventListener("submit", async (event) => {
+            event.preventDefault();
+
+            const formData = new FormData();
+            formData.append("email", emailInput.value);
+            formData.append("file", fileInput.files[0]);
+
+            if (!emailInput.value) {
+                alert("Lütfen e-posta adresinizi girin.");
+                return;
+            }
+
+            try {
+                const response = await fetch("/uploadarticle/", {
+                    method: "POST",
+                    body: formData
+                });
+
+                const result = await response.json();
+                if (response.ok) {
+                    alert(`Başarılı! Takip numaranız: ${result.tracking_no}`);  // Tırnak düzeltildi
+                } else {
+                    alert(`Hata: ${result.error}`);  // Tırnak düzeltildi
+                }
+            } catch (error) {
+                alert("Sunucu hatası! Lütfen tekrar deneyin.");
+            }
+        });
+    });
+</script>
 </body>
 </html>

@@ -78,11 +78,14 @@ button:hover {
 /* Sonuç Bölümü */
 #resultContainer {
     background: rgba(255, 255, 255, 0.15);
-    padding: 20px;
+    padding: 25px;
     border-radius: 10px;
     box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.2);
     margin-top: 20px;
+    text-align: left;
+    font-size: 18px;
 }
+
 
 /* Mesajlaşma Kutusu */
 .chat-container {
@@ -155,6 +158,35 @@ button:hover {
     color: white;
     text-align: left;
 }
+#logContainer {
+    margin-top: 15px;
+    padding: 15px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+#logContainer p {
+    margin: 5px 0;
+    padding: 8px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 5px;
+    color: #ddd;
+}
+#pdfContainer {
+    margin-top: 20px;
+    border: 2px solid white;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+embed {
+    width: 100%;
+    height: 500px;
+    border-radius: 8px;
+}
+
 
 /* Animasyonlar */
 @keyframes fadeIn {
@@ -216,9 +248,10 @@ button:hover {
         <div id="logContainer"></div>
         <div id="pdfContainer" style="display:none;">
             <h3>Değerlendirme PDF:</h3>
-            <embed id="assessmentPdf" width="100%" height="500px" type="application/pdf">
+            <embed id="assessmentPdf" type="application/pdf">
         </div>
     </div>
+    
 
     <!-- Mesajlaşma alanı -->
     <div class="chat-container" id="chatBox"></div>
@@ -229,113 +262,118 @@ button:hover {
         <button onclick="sendMessage()">Gönder</button>
     </div>
 
-    <script>
-        let userEmail = "";
-let trackingNo = "";
+<script>
 
-async function queryArticle() {
-            const trackingNo = document.getElementById("trackingInput").value.trim();
-            if (!trackingNo) {
-                alert("Lütfen takip numaranızı girin.");
-                return;
-            }
+    let userEmail = "";
+    let trackingNo = "";
 
-            try {
-                const response = await fetch("/check_article_status/", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ tracking_no: trackingNo })
-                });
-
-                const result = await response.json();
-
-                if (response.ok) {
-                    document.getElementById("ownerEmail").textContent = result.owner_email;
-                    document.getElementById("articleStatus").textContent = result.status;
-                    document.getElementById("resultContainer").style.display = "block";
-
-                    let logHtml = "<h3>Log Kayıtları:</h3>";
-                    result.logs.forEach(log => {
-                        logHtml += `<p>${log}</p>`;
-                    });
-                    document.getElementById("logContainer").innerHTML = logHtml;
-
-                    if (result.has_final_assessment) {
-                        const pdfUrl = `/view_final_assessment_pdf/${trackingNo}/`;
-                        const pdfEmbed = document.getElementById("assessmentPdf");
-                        pdfEmbed.src = pdfUrl;
-                        document.getElementById("pdfContainer").style.display = "block";
-                    }
-                } else {
-                    alert(result.error);
-                }
-            } catch (error) {
-                alert("Makale sorgulama sırasında bir hata oluştu.");
-            }
-        }
-
-function startChat() {
-    if (!userEmail) {
-        alert("Makale sahibi bilgisi bulunamadı.");
-        return;
-    }
-
-    document.getElementById("resultContainer").style.display = "none";
-    document.getElementById("chatBox").style.display = "block";
-    document.getElementById("messageContainer").style.display = "flex";
-    loadMessages();
-}
-
-async function sendMessage() {
-    const messageInput = document.getElementById("messageInput");
-    const messageText = messageInput.value.trim();
-    const receiver = "admin";
-
-    if (!userEmail || !receiver || !messageText) {
-        alert("Gönderen, alıcı ve mesaj boş olamaz!");
+    async function queryArticle() {
+    const trackingNo = document.getElementById("trackingInput").value.trim();
+    if (!trackingNo) {
+        alert("Lütfen takip numaranızı girin.");
         return;
     }
 
     try {
-        const response = await fetch("/send_message/", {
+        const response = await fetch("/check_article_status/", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ sender: userEmail, receiver: receiver, message: messageText })
+            body: JSON.stringify({ tracking_no: trackingNo })
         });
+
+        const result = await response.json();
 
         if (response.ok) {
-            appendMessage(userEmail, messageText);
-            messageInput.value = "";
+            // Kullanıcı e-postasını değişkene atıyoruz
+            userEmail = result.owner_email;
+
+            document.getElementById("ownerEmail").textContent = result.owner_email;
+            document.getElementById("articleStatus").textContent = result.status;
+            document.getElementById("resultContainer").style.display = "block";
+
+            let logHtml = "<h3>Log Kayıtları:</h3>";
+            result.logs.forEach(log => {
+                logHtml += `<p>${log}</p>`;
+            });
+            document.getElementById("logContainer").innerHTML = logHtml;
+
+            if (result.has_final_assessment) {
+                const pdfUrl = `/view_final_assessment_pdf/${trackingNo}/`;
+                const pdfEmbed = document.getElementById("assessmentPdf");
+                pdfEmbed.src = pdfUrl;
+                document.getElementById("pdfContainer").style.display = "block";
+            }
         } else {
-            alert("Mesaj gönderilirken hata oluştu.");
+            alert(result.error);
         }
     } catch (error) {
-        alert("Bağlantı hatası!");
+        alert("Makale sorgulama sırasında bir hata oluştu.");
     }
 }
 
-async function loadMessages() {
-    try {
-        const response = await fetch(`/get_messages/?email=${encodeURIComponent(userEmail)}&receiver=admin`);
-        const messages = await response.json();
+    function startChat() {
+        if (!userEmail) {
+            alert("Makale sahibi bilgisi bulunamadı.");
+            return;
+        }
+
+        document.getElementById("resultContainer").style.display = "none";
+        document.getElementById("chatBox").style.display = "block";
+        document.getElementById("messageContainer").style.display = "flex";
+        loadMessages();
+    }
+
+    async function sendMessage() {
+        const messageInput = document.getElementById("messageInput");
+        const messageText = messageInput.value.trim();
+        const receiver = "admin";
+
+        if (!userEmail || !receiver || !messageText) {
+            alert("Gönderen, alıcı ve mesaj boş olamaz!");
+            return;
+        }
+
+        try {
+            const response = await fetch("/send_message/", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ sender: userEmail, receiver: receiver, message: messageText })
+            });
+
+            if (response.ok) {
+                appendMessage(userEmail, messageText);
+                messageInput.value = "";
+            } else {
+                alert("Mesaj gönderilirken hata oluştu.");
+            }
+        } catch (error) {
+            alert("Bağlantı hatası!");
+        }
+    }
+
+    async function loadMessages() {
+        try {
+            const response = await fetch(`/get_messages/?email=${encodeURIComponent(userEmail)}&receiver=admin`);  // URL yapısı düzeltildi
+            const messages = await response.json();
+            const chatBox = document.getElementById("chatBox");
+            chatBox.innerHTML = "";
+
+            messages.forEach(msg => {
+                appendMessage(msg.sender, msg.message);
+            });
+        } catch (error) {
+            alert("Mesajlar yüklenirken hata oluştu.");
+        }
+    }
+
+    function appendMessage(sender, message) {
         const chatBox = document.getElementById("chatBox");
-        chatBox.innerHTML = "";
-
-        messages.forEach(msg => {
-            appendMessage(msg.sender, msg.message);
-        });
-    } catch (error) {
-        alert("Mesajlar yüklenirken hata oluştu.");
+        const newMessage = document.createElement("p");
+        newMessage.innerHTML = `<strong>${sender}:</strong> ${message}`;  // Tırnak düzeltildi
+        chatBox.appendChild(newMessage);
+        chatBox.scrollTop = chatBox.scrollHeight;
     }
-}
+</script>
 
-function appendMessage(sender, message) {
-    const chatBox = document.getElementById("chatBox");
-    const newMessage = document.createElement("p");
-    newMessage.innerHTML = `<strong>${sender}:</strong> ${message}`;
-    chatBox.appendChild(newMessage);
-    chatBox.scrollTop = chatBox.scrollHeight;
-}
-    </script>
 </body>
 </html>
