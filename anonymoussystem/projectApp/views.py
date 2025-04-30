@@ -468,7 +468,6 @@ def view_protected_pdf(request, id):
 
 
 
-
 # alperenin fonklar
 
 def get_referees(request):
