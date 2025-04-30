@@ -87,7 +87,7 @@ To contribute or report an issue, please use the repository or contact:
 `alperen.arda.adem22@gmail.com`  
 `omer2020084@gmail.com`
 
-### Photos
+### Screenshots
 
 ![](readme_images/image2.jpg)
 *Navigation panel for upload, inquiry, referee, and admin pages.*
