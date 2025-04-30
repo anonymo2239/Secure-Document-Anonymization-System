@@ -89,20 +89,26 @@ To contribute or report an issue, please use the repository or contact:
 
 ### Photos
 
-![](images/image1.png)
+![](readme_images/image2.jpg)
 *He/she can access the relevant pages via the buttons here for article upload, inquiry, referee and editorial operations.*
 
-![](images/image2.png)
+![](readme_images/image1.jpg)
 *Users can upload their articles from this field to the system and start the evaluation process.*
 
-![](images/image3.png)
+![](readme_images/image4.jpg)
 *The user can see the stage of his/her article in the evaluation process and review the feedback from the referee.*
 
-![](images/image4.png)
+![](readme_images/image5.jpg)
 *Referees can view the anonymized articles assigned to them in this field and enter their evaluation notes into the system.*
 
-![](images/image5.png)
+![](readme_images/image6.png)
 *'Suggest me recipe' page that we can see the situation of recipes*
 
-![](images/image6.png)
+![](readme_images/image7.png)
+*The editor can review the uploaded articles, appoint referees and manage the evaluation process.*
+
+![](readme_images/image8.png)
+*The editor can review the uploaded articles, appoint referees and manage the evaluation process.*
+
+![](readme_images/image9.png)
 *The editor can review the uploaded articles, appoint referees and manage the evaluation process.*
