@@ -90,25 +90,25 @@ To contribute or report an issue, please use the repository or contact:
 ### Photos
 
 ![](readme_images/image2.jpg)
-*He/she can access the relevant pages via the buttons here for article upload, inquiry, referee and editorial operations.*
+*Navigation panel for upload, inquiry, referee, and admin pages.*
 
 ![](readme_images/image1.jpg)
-*Users can upload their articles from this field to the system and start the evaluation process.*
+*Users can check the status of their submission and send a message using their tracking number.*
 
 ![](readme_images/image4.jpg)
-*The user can see the stage of his/her article in the evaluation process and review the feedback from the referee.*
+*Users enter their email and upload a PDF to start the process.*
 
 ![](readme_images/image5.jpg)
-*Referees can view the anonymized articles assigned to them in this field and enter their evaluation notes into the system.*
+*Editors review and anonymize articles, assign referees.*
 
 ![](readme_images/image6.png)
-*'Suggest me recipe' page that we can see the situation of recipes*
+*Editors review the article, apply anonymization, and assign referees.*
 
 ![](readme_images/image7.png)
-*The editor can review the uploaded articles, appoint referees and manage the evaluation process.*
+*Author faces are auto-detected, blurred and informations anonymized in the PDF.*
 
 ![](readme_images/image8.png)
-*The editor can review the uploaded articles, appoint referees and manage the evaluation process.*
+*Shows time-stamped system actions and user activities.*
 
 ![](readme_images/image9.png)
-*The editor can review the uploaded articles, appoint referees and manage the evaluation process.*
+*A sample referee comment submitted for an article.*
